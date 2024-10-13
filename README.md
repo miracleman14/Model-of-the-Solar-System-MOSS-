@@ -1,4 +1,4 @@
-# Your project name here
+# Model of the Solar System
 
 ## Information about this repository
 
