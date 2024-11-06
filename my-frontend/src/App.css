@@ -1,10 +1,12 @@
 .App {
   text-align: center;
+  font-family: Arial, sans-serif; /* Set a clean font for the app */
 }
 
 .App-logo {
   height: 40vmin;
   pointer-events: none;
+  margin-bottom: 20px; /* Add some space below the logo */
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -14,18 +16,31 @@
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  background-color: #282c34; /* Dark background for the header */
+  min-height: 100vh; /* Full height */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: calc(10px + 2vmin);
-  color: white;
+  color: white; /* White text for contrast */
+  padding: 20px; /* Add some padding */
+  border-radius: 8px; /* Round corners for a softer look */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
 }
 
 .App-link {
-  color: #61dafb;
+  color: #61dafb; /* Link color */
+  text-decoration: none; /* Remove underline */
+  margin: 10px; /* Space around links */
+  padding: 8px 16px; /* Add padding */
+  border-radius: 4px; /* Round corners for links */
+  transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for hover effect */
+}
+
+.App-link:hover {
+  background-color: rgba(97, 218, 251, 0.2); /* Light blue background on hover */
+  color: #21a1f1; /* Slightly darker link color on hover */
 }
 
 @keyframes App-logo-spin {

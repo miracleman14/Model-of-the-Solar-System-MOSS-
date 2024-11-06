@@ -1,53 +1,50 @@
-// src/components/SimulationComponent.js
-import React, { useState } from 'react';
-import axios from 'axios'; // Import axios
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const SimulationComponent = () => {
-    const [results, setResults] = useState(null);
-    const [steps, setSteps] = useState(10); // Default values
-    const [timeStep, setTimeStep] = useState(1.0); // Default values
+    const [mercuryPosition, setMercuryPosition] = useState([0, 0]);
+    const [venusPosition, setVenusPosition] = useState([0, 0]);
+    const [mercuryOrbitRadius, setMercuryOrbitRadius] = useState(0);
+    const [venusOrbitRadius, setVenusOrbitRadius] = useState(0);
 
-    const runSimulation = async () => {
-        if (isNaN(steps) || isNaN(timeStep) || steps <= 0 || timeStep <= 0) {
-            alert("Please enter valid positive numbers for steps and time step.");
-            return;
-        }
-
+    const runSimulation = async (date) => {
         try {
-            const response = await axios.get(`http://127.0.0.1:5000/simulate/${steps}/${timeStep}`);
-            setResults(response.data);
+            const response = await axios.get(`http://127.0.0.1:5000/simulate?date=${date}`);
+            const { mercury_position, venus_position, mercury_orbit_radius, venus_orbit_radius } = response.data;
+            setMercuryPosition(mercury_position);
+            setVenusPosition(venus_position);
+            setMercuryOrbitRadius(mercury_orbit_radius);
+            setVenusOrbitRadius(venus_orbit_radius);
         } catch (error) {
             console.error('Error fetching simulation data:', error);
-            alert("Error fetching simulation data. Please check the server.");
         }
     };
 
+    useEffect(() => {
+        runSimulation('2024-01-01');
+    }, []);
+
     return (
         <div>
-            <h2>Run Solar System Simulation</h2>
-            <input
-                type="number"
-                value={steps}
-                onChange={(e) => setSteps(Number(e.target.value))}
-                placeholder="Enter steps"
-            />
-            <input
-                type="number"
-                value={timeStep}
-                onChange={(e) => setTimeStep(Number(e.target.value))}
-                placeholder="Enter time step"
-                step="0.1" // Allow decimal input
-            />
-            <button onClick={runSimulation}>Run Simulation</button>
+            <h2>Solar System Simulation</h2>
+            <svg width="800" height="800" viewBox="-400 -400 800 800">
+                {/* Orbit Circles */}
+                <circle cx="0" cy="0" r={mercuryOrbitRadius} stroke="gray" strokeWidth="1" fill="none" />
+                <circle cx="0" cy="0" r={venusOrbitRadius} stroke="gray" strokeWidth="1" fill="none" />
 
-            {results && (
-                <div>
-                    <h3>Simulation Results</h3>
-                    <p>Mercury Position: {JSON.stringify(results.mercury_position)}</p>
-                    <p>Venus Position: {JSON.stringify(results.venus_position)}</p>
-                    <p>Sun Position: {JSON.stringify(results.sun_position)}</p>
-                </div>
-            )}
+                {/* Planets */}
+                <circle cx={mercuryPosition[0]} cy={mercuryPosition[1]} r="3" fill="gray" />
+                <circle cx={venusPosition[0]} cy={venusPosition[1]} r="4" fill="orange" />
+
+                {/* Sun */}
+                <circle cx="0" cy="0" r="10" fill="yellow" />
+            </svg>
+
+            <input
+                type="date"
+                onChange={(e) => runSimulation(e.target.value)}
+                defaultValue="2024-01-01"
+            />
         </div>
     );
 };
