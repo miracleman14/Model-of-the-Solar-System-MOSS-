@@ -1,12 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap'); /* Basic styles */
 .App {
   text-align: center;
-  font-family: Arial, sans-serif; /* Set a clean font for the app */
+  font-family: 'Arial', sans-serif;
+  background-color: #1b1e23; /* Darker background for a space effect */
+  color: #ffffff;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Logo animation */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
-  margin-bottom: 20px; /* Add some space below the logo */
+  margin-bottom: 20px;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -15,39 +23,83 @@
   }
 }
 
+/* Header styling */
 .App-header {
-  background-color: #282c34; /* Dark background for the header */
-  min-height: 100vh; /* Full height */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white; /* White text for contrast */
-  padding: 20px; /* Add some padding */
-  border-radius: 8px; /* Round corners for a softer look */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+  background-color: #282c34;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  width: 90%;
 }
 
+/* Link styles */
 .App-link {
-  color: #61dafb; /* Link color */
-  text-decoration: none; /* Remove underline */
-  margin: 10px; /* Space around links */
-  padding: 8px 16px; /* Add padding */
-  border-radius: 4px; /* Round corners for links */
-  transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition for hover effect */
+  color: #61dafb;
+  text-decoration: none;
+  margin: 10px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .App-link:hover {
-  background-color: rgba(97, 218, 251, 0.2); /* Light blue background on hover */
-  color: #21a1f1; /* Slightly darker link color on hover */
+  background-color: rgba(97, 218, 251, 0.2);
+  color: #21a1f1;
 }
 
+/* Date display */
+.date-display {
+  font-size: 1.2em;
+  color: #a0a0a0;
+  margin: 10px 0 20px;
+}
+
+/* Simulation controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.control-button {
+  padding: 10px 20px;
+  background-color: #4e8dd9;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.control-button:hover {
+  background-color: #3a6b9e;
+}
+
+/* Custom font for space vibe */
+.App {
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Orbit visual effect */
+.orbit-circle {
+  border: 2px dotted rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: orbit-rotate infinite 60s linear;
+}
+
+@keyframes orbit-rotate {
+  from { transform: rotate(0deg) translate(-50%, -50%); }
+  to { transform: rotate(360deg) translate(-50%, -50%); }
+}
+
+/* Keyframe for logo spin */
 @keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

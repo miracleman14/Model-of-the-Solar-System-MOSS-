@@ -1,12 +1,10 @@
 import datetime
 import math
 from flask import Flask, jsonify, request
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS
 
 app = Flask(__name__)
-
-# Enable CORS for all routes
-CORS(app)
+CORS(app)  # Enable CORS for all routes
 
 # Constants
 G = 6.67430e-11  # Gravitational constant
@@ -16,72 +14,51 @@ VENUS_MASS = 4.8675e24
 MERCURY_ORBIT_RADIUS = 57.9e9  # Mercury orbit radius (m)
 VENUS_ORBIT_RADIUS = 108.2e9  # Venus orbit radius (m)
 
-class Vector3D:
-    def __init__(self, x=0, y=0, z=0):
-        self.x = x
-        self.y = y
-        self.z = z
+# Orbit speeds (in radians per second)
+MERCURY_ORBITAL_SPEED = 2 * math.pi / (87.97 * 24 * 3600)  # Complete orbit in 87.97 days
+VENUS_ORBITAL_SPEED = 2 * math.pi / (224.7 * 24 * 3600)    # Complete orbit in 224.7 days
 
-    def __add__(self, other):
-        return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
+# Initialize starting date
+epoch_date = datetime.datetime(2020, 1, 1)  # Epoch date for simulation
 
-class Planet:
-    def __init__(self, mass, orbit_radius, orbital_speed):
-        self.mass = mass
-        self.orbit_radius = orbit_radius  # In meters
-        self.orbital_speed = orbital_speed  # Speed in m/s
-        self.angle = 0  # Starting angle (radians)
-
-    def update_position(self, time_step):
-        self.angle += self.orbital_speed * time_step / self.orbit_radius  # Update angular position
-        # Ensure the angle wraps around correctly (0 to 2π)
-        self.angle = self.angle % (2 * math.pi)
-
-        # Calculate x, y positions based on the current angle and orbit radius
-        x = self.orbit_radius * math.cos(self.angle)
-        y = self.orbit_radius * math.sin(self.angle)
-
-        return x, y
-
-# Define planets
-mercury = Planet(MERCURY_MASS, MERCURY_ORBIT_RADIUS, 47.36e3)  # Speed in m/s for Mercury
-venus = Planet(VENUS_MASS, VENUS_ORBIT_RADIUS, 35.02e3)  # Speed in m/s for Venus
+# Starting angles for each planet
+mercury_angle = 0
+venus_angle = 0
 
 @app.route('/simulate', methods=['GET'])
 def simulate():
-    # Get date input
-    date_input = request.args.get('date', default='2024-01-01')  # Default to 2024-01-01 if not provided
-    target_date = datetime.datetime.strptime(date_input, '%Y-%m-%d')
+    global mercury_angle, venus_angle, epoch_date
 
-    # Starting date for the simulation (e.g., when the simulation begins, "epoch")
-    epoch_date = datetime.datetime(2020, 1, 1)
+    # Retrieve the speed factor from query parameters (defaults to 1 if not provided)
+    speed_factor = float(request.args.get('speed', 1))
 
-    # Calculate elapsed time in seconds
-    elapsed_time = (target_date - epoch_date).total_seconds()
+    # Advance time in the simulation according to the speed factor
+    time_step = 3600 * speed_factor  # Time step scaled by the speed factor (1 hour * speed factor in seconds)
+    current_date = epoch_date + datetime.timedelta(seconds=time_step)
+    epoch_date = current_date  # Update epoch date for the next call
 
-    # Time step (1 hour for a smoother simulation)
-    time_step = 3600  # 1 hour in seconds
+    # Update angles for each planet
+    mercury_angle += MERCURY_ORBITAL_SPEED * time_step
+    venus_angle += VENUS_ORBITAL_SPEED * time_step
 
-    mercury_positions = []
-    venus_positions = []
+    # Wrap angles around 0 to 2π
+    mercury_angle %= 2 * math.pi
+    venus_angle %= 2 * math.pi
 
-    # Update positions based on elapsed time
-    mercury_x, mercury_y = mercury.update_position(elapsed_time)
-    venus_x, venus_y = venus.update_position(elapsed_time)
+    # Calculate positions
+    mercury_x = MERCURY_ORBIT_RADIUS * math.cos(mercury_angle) / 1e9  # Scale down for visibility
+    mercury_y = MERCURY_ORBIT_RADIUS * math.sin(mercury_angle) / 1e9
+    venus_x = VENUS_ORBIT_RADIUS * math.cos(venus_angle) / 1e9
+    venus_y = VENUS_ORBIT_RADIUS * math.sin(venus_angle) / 1e9
 
-    # Scale positions for visualization (to kilometers for better scaling)
-    mercury_position = (mercury_x / 1e9, mercury_y / 1e9)  # Scale to km for visibility
-    venus_position = (venus_x / 1e9, venus_y / 1e9)
-
-    # Return positions of the planets and their orbits
     return jsonify({
-        'mercury_position': mercury_position,
-        'venus_position': venus_position,
-        'sun_position': (0, 0),  # Sun always at the center
-        'mercury_orbit_radius': mercury.orbit_radius / 1e9,  # Scale orbit radius to km
-        'venus_orbit_radius': venus.orbit_radius / 1e9,  # Scale orbit radius to km
+        'mercury_position': (mercury_x, mercury_y),
+        'venus_position': (venus_x, venus_y),
+        'sun_position': (0, 0),
+        'mercury_orbit_radius': MERCURY_ORBIT_RADIUS / 1e9,
+        'venus_orbit_radius': VENUS_ORBIT_RADIUS / 1e9,
+        'current_date': current_date.strftime('%Y-%m-%d %H:%M:%S')
     })
-
 
 if __name__ == '__main__':
     app.run(debug=True)
