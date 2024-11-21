@@ -1,7 +1,3 @@
-Here’s your README.md file formatted in Markdown:
-
-markdown
-Copy code
 # Model of the Solar System
 
 ## Project Overview
@@ -42,9 +38,11 @@ The main software artefacts are located in:
    cd path/to/your/frontend/directory
 Run the following command to install the necessary Node.js dependencies (using npm or yarn):
 
-Using npm:
-bash
-Copy code
+**Using npm:**
+```bash
+npm install
+
+
 npm install
 Or if you are using yarn:
 bash
