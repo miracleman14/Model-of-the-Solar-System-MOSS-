@@ -1,9 +1,115 @@
+Here’s your README.md file formatted in Markdown:
+
+markdown
+Copy code
 # Model of the Solar System
 
-## Information about this repository
+## Project Overview
 
-This is the repository that you are going to use **individually** for developing your project. Please use the resources provided in the module to learn about **plagiarism** and how plagiarism awareness can foster your learning.
+This repository contains the development of a 3D solar system simulation. The simulation models the planets in orbit around the sun, considering real-time physics for each celestial body, including gravity and orbital mechanics. This project is built using Flask for the backend and React.js for the frontend.
 
-Regarding the use of this repository, once a feature (or part of it) is developed and **working** or parts of your system are integrated and **working**, define a commit and push it to the remote repository. You may find yourself making a commit after a productive hour of work (or even after 20 minutes!), for example. Choose commit message wisely and be concise.
+### Features
+- **Planetary Simulations:** Models orbits, velocities, and masses based on real-world physics.
+- **User Interaction:** Allows users to zoom in/out, adjust the view, and interact with planets.
+- **Real-time Updates:** Displays changes in the system's state as planets move based on calculated physics.
+- **Physics Engine:** Uses Newtonian mechanics to simulate the interactions between celestial bodies.
 
-Please choose the structure of the contents of this repository that suits the needs of your project but do indicate in this file where the main software artefacts are located.
+## Project Structure
+
+The repository is divided into the following main components:
+
+- `/backend`: Contains the Flask-based backend code for the simulation, handling API requests and physics calculations.
+- `/frontend`: React.js code that renders the solar system simulation and handles user inputs.
+- `/docs`: Documentation related to the project, including architecture, design decisions, and development notes.
+- `/assets`: Static assets for images, textures, and other resources used in the simulation.
+
+The main software artefacts are located in:
+
+- `/backend/` - The main simulation logic that updates the planetary positions.
+- `/frontend/src/` - The main React component for rendering the 3D solar system.
+
+## Getting Started
+
+### Prerequisites
+- Python 3.8+ for backend development
+- Node.js 14+ for frontend development
+
+### Install Dependencies
+
+#### Frontend (React) Dependencies:
+1. Navigate to your project’s frontend directory:
+   ```bash
+   cd path/to/your/frontend/directory
+Run the following command to install the necessary Node.js dependencies (using npm or yarn):
+
+Using npm:
+bash
+Copy code
+npm install
+Or if you are using yarn:
+bash
+Copy code
+yarn install
+This will install all the dependencies listed in your package.json file, including:
+
+@react-three/drei
+react
+axios
+d3
+socket.io-client
+And others.
+Backend (Flask) Dependencies:
+Navigate to your backend directory:
+
+bash
+Copy code
+cd path/to/your/backend/directory
+Create a virtual environment if you haven’t already:
+
+bash
+Copy code
+python -m venv venv
+Activate your virtual environment:
+
+On Windows:
+bash
+Copy code
+venv\Scripts\activate
+On macOS/Linux:
+bash
+Copy code
+source venv/bin/activate
+Install the Python dependencies listed in requirements.txt:
+
+bash
+Copy code
+pip install -r requirements.txt
+This will install all the backend dependencies, including:
+
+Flask
+Flask-Cors
+Werkzeug
+Jinja2
+itsdangerous
+And others.
+Running the Simulation
+Clone the repository:
+
+bash
+Copy code
+git clone https://campus.cs.le.ac.uk/gitlab/ug_project/24-25/mn303.git
+Set up the backend:
+
+Navigate to the backend directory and run:
+bash
+Copy code
+python app.py
+Set up the frontend:
+
+Navigate to the frontend directory and run:
+bash
+Copy code
+npm start
+Open the simulation in your browser at: http://localhost:3000.
+
+Note: I am intending to make the project accessible via browser link by uploading it to GitHub Pages to make it easier to access.
