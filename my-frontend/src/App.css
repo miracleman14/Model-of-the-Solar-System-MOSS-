@@ -1,16 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap'); /* Basic styles */
+/* Google Fonts Import */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+/* General App Styling */
 .App {
-  text-align: center;
-  font-family: 'Arial', sans-serif;
-  background-color: #1b1e23; /* Darker background for a space effect */
+  font-family: sans-serif; /* Space-inspired font */
+  background-color: #1b1e23; /* Dark background for space effect */
   color: #ffffff;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 }
 
-/* Logo animation */
+/* Logo Styling */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -23,7 +26,7 @@
   }
 }
 
-/* Header styling */
+/* Header Styling */
 .App-header {
   background-color: #282c34;
   padding: 20px;
@@ -33,7 +36,7 @@
   width: 90%;
 }
 
-/* Link styles */
+/* Link Styling */
 .App-link {
   color: #61dafb;
   text-decoration: none;
@@ -48,14 +51,14 @@
   color: #21a1f1;
 }
 
-/* Date display */
+/* Date Display Styling */
 .date-display {
   font-size: 1.2em;
   color: #a0a0a0;
   margin: 10px 0 20px;
 }
 
-/* Simulation controls */
+/* Simulation Controls */
 .controls {
   display: flex;
   justify-content: center;
@@ -70,19 +73,14 @@
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s ease;
 }
 
 .control-button:hover {
   background-color: #3a6b9e;
 }
 
-/* Custom font for space vibe */
-.App {
-  font-family: 'Orbitron', sans-serif;
-}
-
-/* Orbit visual effect */
+/* Orbit Visual Effect */
 .orbit-circle {
   border: 2px dotted rgba(255, 255, 255, 0.3);
   border-radius: 50%;
@@ -94,12 +92,20 @@
 }
 
 @keyframes orbit-rotate {
-  from { transform: rotate(0deg) translate(-50%, -50%); }
-  to { transform: rotate(360deg) translate(-50%, -50%); }
+  from {
+    transform: rotate(0deg) translate(-50%, -50%);
+  }
+  to {
+    transform: rotate(360deg) translate(-50%, -50%);
+  }
 }
 
-/* Keyframe for logo spin */
+/* Logo Spin Keyframe */
 @keyframes App-logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

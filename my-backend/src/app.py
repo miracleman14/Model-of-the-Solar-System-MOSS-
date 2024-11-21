@@ -1,64 +1,111 @@
-import datetime
-import math
 from flask import Flask, jsonify, request
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
+import requests
+import calculations
+import time
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, origins=["http://localhost:3000"])
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000"])
 
-# Constants
-G = 6.67430e-11  # Gravitational constant
-SUN_MASS = 1.989e30  # Sun's mass (kg)
-MERCURY_MASS = 3.3011e23
-VENUS_MASS = 4.8675e24
-MERCURY_ORBIT_RADIUS = 57.9e9  # Mercury orbit radius (m)
-VENUS_ORBIT_RADIUS = 108.2e9  # Venus orbit radius (m)
+# Gravitational constant
+G = 6.67430e-11
+dt = 60  # Default time step (60 seconds)
 
-# Orbit speeds (in radians per second)
-MERCURY_ORBITAL_SPEED = 2 * math.pi / (87.97 * 24 * 3600)  # Complete orbit in 87.97 days
-VENUS_ORBITAL_SPEED = 2 * math.pi / (224.7 * 24 * 3600)    # Complete orbit in 224.7 days
+# Function to fetch initial planet data
+import math
 
-# Initialize starting date
-epoch_date = datetime.datetime(2020, 1, 1)  # Epoch date for simulation
+def fetch_initial_planet_data():
+    api_url = "https://api.le-systeme-solaire.net/rest/bodies/"
+    planets = ["sun", "mercury", "venus"]
+    initial_data = []
 
-# Starting angles for each planet
-mercury_angle = 0
-venus_angle = 0
+    for planet_name in planets:
+        response = requests.get(f"{api_url}{planet_name}")
+        if response.status_code == 200:
+            data = response.json()
+            if "semimajorAxis" in data and "mass" in data and "equaRadius" in data:
+                # Ensure distance is non-zero and valid
+                distance = float(data["semimajorAxis"]) * 1000  # Convert to meters
+                if distance == 0:
+                    print(f"Warning: Invalid distance for {planet_name}. Skipping.")
+                    continue  # Skip this planet if the distance is zero
 
-@app.route('/simulate', methods=['GET'])
-def simulate():
-    global mercury_angle, venus_angle, epoch_date
+                mass = float(data["mass"]["massValue"]) * 10 ** int(data["mass"]["massExponent"])
+                velocity = math.sqrt(G * 1.989e30 / distance)  # Tangential velocity
 
-    # Retrieve the speed factor from query parameters (defaults to 1 if not provided)
-    speed_factor = float(request.args.get('speed', 1))
+                planet = {
+                    "name": data["englishName"],
+                    "mass": mass,
+                    "radius": float(data["equaRadius"]),
+                    "x": distance,  # Assume starting x-position based on semimajorAxis
+                    "y": 0,  # Start on the x-axis
+                    "vx": 0,  # Update for correct velocity
+                    "vy": velocity,  # Correct tangential velocity
+                }
+                initial_data.append(planet)
+            else:
+                print(f"Warning: Missing data for {planet_name}. Skipping.")
+        else:
+            print(f"Failed to fetch data for {planet_name}")
 
-    # Advance time in the simulation according to the speed factor
-    time_step = 3600 * speed_factor  # Time step scaled by the speed factor (1 hour * speed factor in seconds)
-    current_date = epoch_date + datetime.timedelta(seconds=time_step)
-    epoch_date = current_date  # Update epoch date for the next call
-
-    # Update angles for each planet
-    mercury_angle += MERCURY_ORBITAL_SPEED * time_step
-    venus_angle += VENUS_ORBITAL_SPEED * time_step
-
-    # Wrap angles around 0 to 2π
-    mercury_angle %= 2 * math.pi
-    venus_angle %= 2 * math.pi
-
-    # Calculate positions
-    mercury_x = MERCURY_ORBIT_RADIUS * math.cos(mercury_angle) / 1e9  # Scale down for visibility
-    mercury_y = MERCURY_ORBIT_RADIUS * math.sin(mercury_angle) / 1e9
-    venus_x = VENUS_ORBIT_RADIUS * math.cos(venus_angle) / 1e9
-    venus_y = VENUS_ORBIT_RADIUS * math.sin(venus_angle) / 1e9
-
-    return jsonify({
-        'mercury_position': (mercury_x, mercury_y),
-        'venus_position': (venus_x, venus_y),
-        'sun_position': (0, 0),
-        'mercury_orbit_radius': MERCURY_ORBIT_RADIUS / 1e9,
-        'venus_orbit_radius': VENUS_ORBIT_RADIUS / 1e9,
-        'current_date': current_date.strftime('%Y-%m-%d %H:%M:%S')
+    # Add Sun manually
+    initial_data.insert(0, {
+        "name": "Sun",
+        "mass": 1.989e30,
+        "radius": 696.34e6,
+        "x": 0,
+        "y": 0,
+        "vx": 0,
+        "vy": 0
     })
+    return initial_data
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+
+planets = fetch_initial_planet_data()
+
+# Function to handle speed adjustment from frontend
+@socketio.on('adjust_speed')
+def adjust_speed(data):
+    global dt
+    speed_factor = data.get('speed', 1)
+
+    # Adjust time step based on speed factor
+    dt = 60 * speed_factor  # Scale the timestep according to the speed factor
+    emit('speed_updated', {'dt': dt}, broadcast=True)
+
+# Function to start the simulation
+@socketio.on('start_simulation')
+def start_simulation():
+    global dt
+    virtual_date = datetime.now()
+
+    while True:
+        # Perform calculations
+        calculations.calculate_forces(planets)
+        calculations.verlet_step(planets, dt)
+
+        # Update virtual date based on dt
+        virtual_date += timedelta(seconds=dt)
+
+        # Prepare data to send to frontend
+        planet_data = [
+            {**planet, "x": planet['x'], "y": planet['y']} for planet in planets if planet['name'] != "Sun"
+        ]
+
+        # Emit planet data and current date
+        socketio.emit('planet_data', {'planets': planet_data, 'date': virtual_date.isoformat()})
+        socketio.sleep(0.05)  # Use socketio's event loop sleep
+
+@app.route('/api/planet-data')
+def get_planet_data():
+    step_data = [
+        {**planet, "x": planet['x'], "y": planet['y']} for planet in planets if planet['name'] != "Sun"
+    ]
+    return jsonify([step_data])
+
+if __name__ == "__main__":
+    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
