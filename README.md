@@ -49,46 +49,50 @@ Or if you are using yarn:
 yarn install
 This will install all the dependencies listed in your package.json file, including:
 
-@react-three/drei
-react
-axios
-d3
-socket.io-client
-And others.
+- @react-three/drei
+- react
+- axios
+- d3
+- socket.io-client
+- And others.
+
+
+
 Backend (Flask) Dependencies:
-Navigate to your backend directory:
+- Navigate to your backend directory:
+- cd my-backend
 
 
-cd my-backend
+
 Create a virtual environment if you haven’t already:
+- python -m venv venv
+- Activate your virtual environment:
 
-
-python -m venv venv
-Activate your virtual environment:
 
 On Windows:
-
 venv\Scripts\activate
+
 On macOS/Linux:
-
 source venv/bin/activate
+
 Install the Python dependencies listed in requirements.txt:
-
-
 pip install -r requirements.txt
+
 This will install all the backend dependencies, including:
 
-Flask
-Flask-Cors
-Werkzeug
-Jinja2
-itsdangerous
-And others.
+- Flask
+- Flask-Cors
+- Werkzeug
+- Jinja2
+- itsdangerous
+- And others.
+
+
 Running the Simulation
 Clone the repository:
 
-
 git clone https://campus.cs.le.ac.uk/gitlab/ug_project/24-25/mn303.git
+
 Set up the backend:
 
 Navigate to the backend directory and run:
