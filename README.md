@@ -35,7 +35,7 @@ The main software artefacts are located in:
 #### Frontend (React) Dependencies:
 1. Navigate to your project’s frontend directory:
    ```bash
-   cd path/to/your/frontend/directory
+   cd my-frontend
 Run the following command to install the necessary Node.js dependencies (using npm or yarn):
 
 **Using npm:**
@@ -45,8 +45,7 @@ npm install
 
 npm install
 Or if you are using yarn:
-bash
-Copy code
+
 yarn install
 This will install all the dependencies listed in your package.json file, including:
 
@@ -59,28 +58,23 @@ And others.
 Backend (Flask) Dependencies:
 Navigate to your backend directory:
 
-bash
-Copy code
-cd path/to/your/backend/directory
+
+cd my-backend
 Create a virtual environment if you haven’t already:
 
-bash
-Copy code
+
 python -m venv venv
 Activate your virtual environment:
 
 On Windows:
-bash
-Copy code
+
 venv\Scripts\activate
 On macOS/Linux:
-bash
-Copy code
+
 source venv/bin/activate
 Install the Python dependencies listed in requirements.txt:
 
-bash
-Copy code
+
 pip install -r requirements.txt
 This will install all the backend dependencies, including:
 
@@ -93,20 +87,17 @@ And others.
 Running the Simulation
 Clone the repository:
 
-bash
-Copy code
+
 git clone https://campus.cs.le.ac.uk/gitlab/ug_project/24-25/mn303.git
 Set up the backend:
 
 Navigate to the backend directory and run:
-bash
-Copy code
 python app.py
 Set up the frontend:
 
 Navigate to the frontend directory and run:
-bash
-Copy code
+
+
 npm start
 Open the simulation in your browser at: http://localhost:3000.
 
