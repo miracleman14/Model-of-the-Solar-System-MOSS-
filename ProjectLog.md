@@ -30,19 +30,23 @@ This document logs the progress of the Model of the Solar System project, detail
   - **Increase Speed**: Allows for faster orbit display.
   - **Decrease Speed**: Slows down orbit for slower orbit display.
 
+### Implemented 3D environment
+- Converted simulation to 3D:
+  - **Orbit Controls**: Added orbit controls to move camera around
+  - **Fixed date**: Fixed issues with date glitching after refresh
+
 ---
 
 ## Ongoing Tasks
-- Refine planetary positions to improve accuracy.
-- Integrate more planets into the simulation.
-- Add user interaction elements such as zoom and planet selection.
+- Ensure simulation start positions are accurate
+- Validate simulation completely
 
 ---
 
 ## Planned Tasks
 - Continue adding planetary bodies (Earth, Mars, Jupiter, etc.).
 - Implement time-based progression control for user-defined dates.
-- Enhance user interface for intuitive interactions.
+- Allow user to go back in time
 
 ---
 
@@ -51,4 +55,4 @@ This log will be updated as the project progresses, with each milestone and comp
 
 ---
 
-_Last updated: [12/11/2024]_
+_Last updated: [28/11/2024]_
