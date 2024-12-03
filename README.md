@@ -1,9 +1,34 @@
-# Your project name here
+# Model of the Solar System
 
-## Information about this repository
+## Project Overview
 
-This is the repository that you are going to use **individually** for developing your project. Please use the resources provided in the module to learn about **plagiarism** and how plagiarism awareness can foster your learning.
+This repository contains the development of a 3D solar system simulation. The simulation models the planets in orbit around the sun, considering real-time physics for each celestial body, including gravity and orbital mechanics. This project is built using Flask for the backend and React.js for the frontend.
 
-Regarding the use of this repository, once a feature (or part of it) is developed and **working** or parts of your system are integrated and **working**, define a commit and push it to the remote repository. You may find yourself making a commit after a productive hour of work (or even after 20 minutes!), for example. Choose commit message wisely and be concise.
+### Features
+- **Planetary Simulations:** Models orbits, velocities, and masses based on real-world physics.
+- **User Interaction:** Allows users to zoom in/out, adjust the view, and interact with planets.
+- **Real-time Updates:** Displays changes in the system's state as planets move based on calculated physics.
+- **Physics Engine:** Uses Newtonian mechanics to simulate the interactions between celestial bodies.
 
-Please choose the structure of the contents of this repository that suits the needs of your project but do indicate in this file where the main software artefacts are located.
+## Project Structure
+
+The repository is divided into the following main components:
+
+- `/backend`: Contains the Flask-based backend code for the simulation, handling API requests and physics calculations.
+- `/frontend`: React.js code that renders the solar system simulation and handles user inputs.
+- `/docs`: Documentation related to the project, including architecture, design decisions, and development notes.
+- `/assets`: Static assets for images, textures, and other resources used in the simulation.
+
+The main software artefacts are located in:
+
+- `/backend/` - The main simulation logic that updates the planetary positions.
+- `/frontend/src/` - The main React component for rendering the 3D solar system.
+
+## Getting Started
+
+### Prerequisites
+- Python 3.8+ for backend development
+- Node.js 14+ for frontend development
+
+
+Note: I am intending to make the project accessible via browser link by uploading it to GitHub Pages to make it easier to access.
