@@ -2,41 +2,52 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import io from 'socket.io-client';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 
 const SolarSystem = () => {
-    const [orbitPaths, setOrbitPaths] = useState({});
-    const [planetData, setPlanetData] = useState([]); // Store planet data
-    const [date, setDate] = useState(''); // Store current date
-    const [speed, setSpeed] = useState(1); // Simulation speed (1x normal speed)
+    const [planetData, setPlanetData] = useState([]);
+    const [date, setDate] = useState('');
+    const [speed, setSpeed] = useState(1);
     const sceneRef = useRef(null);
     const cameraRef = useRef(null);
     const rendererRef = useRef(null);
-    const isSceneInitializedRef = useRef(false); // Ensure scene is only initialized once
-    const socketRef = useRef(null); // Reference for the socket connection
-    const timeRef = useRef(0); // Track time for console log animation
-    const controlsRef = useRef(null); // OrbitControls reference
+    const isSceneInitializedRef = useRef(false);
+    const socketRef = useRef(null);
+    const timeRef = useRef(0);
+    const orbitDurationsRef = useRef({}); // Store orbit data
+    const controlsRef = useRef(null);
+    const fontRef = useRef(null);
 
     useEffect(() => {
-        // Fetch initial planet data and set up socket connection
         const fetchData = async () => {
             try {
                 const response = await fetch('http://localhost:5000/reset');
                 const data = await response.json();
-                setPlanetData(data.planets); // Set the initial planet data
+                setPlanetData(data.planets);
 
-                // Set up socket connection
                 const socket = io('http://localhost:5000');
                 socketRef.current = socket;
 
-                // Request the simulation to start
                 socket.emit('start_simulation');
-
-                // Listen for live updates
                 socket.on('planet_data', (data) => {
-                    const ukDate = new Date(data.date).toLocaleString('en-GB');
+
+                    // Truncate the microseconds from the date string (remove everything after the 3rd decimal)
+                    const truncatedDateString = data.date.substring(0, 23); // Keep up to milliseconds
+
+                    const parsedDate = new Date(truncatedDateString);
+                    if (!isNaN(parsedDate)) {
+                        const ukDate = parsedDate.toLocaleString('en-GB');
+                        setDate(ukDate);
+                    } else {
+                        console.error('Invalid date format received:', data.date);
+                        setDate('Invalid Date');
+                    }
                     setPlanetData(data.planets);
-                    setDate(ukDate);
                 });
+
+
+
             } catch (error) {
                 console.error('Error fetching planet data:', error);
             }
@@ -45,7 +56,6 @@ const SolarSystem = () => {
         fetchData();
 
         return () => {
-            // Clean up socket connection on component unmount
             if (socketRef.current) {
                 socketRef.current.disconnect();
             }
@@ -53,7 +63,6 @@ const SolarSystem = () => {
     }, []);
 
     useEffect(() => {
-        // Initialize Three.js scene
         if (!isSceneInitializedRef.current) {
             const scene = new THREE.Scene();
             sceneRef.current = scene;
@@ -67,33 +76,24 @@ const SolarSystem = () => {
             document.body.appendChild(renderer.domElement);
             rendererRef.current = renderer;
 
-            // Add lighting
             const light = new THREE.PointLight(0xffffff, 1, 1000);
             light.position.set(0, 0, 0);
             scene.add(light);
 
-            // Add OrbitControls
             const controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.2;
             controls.screenSpacePanning = true;
             controlsRef.current = controls;
 
-            // Render loop
             const animate = () => {
                 requestAnimationFrame(animate);
                 controls.update();
                 renderer.render(scene, camera);
-
-                // Animate console log based on simulation speed
                 timeRef.current += speed;
-                if (timeRef.current % 100 === 0) { // Log every 100 iterations
-                    console.log(`Simulation running at speed: ${speed}x, Time: ${timeRef.current}`);
-                }
             };
             animate();
 
-            // Handle window resizing
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
@@ -102,49 +102,114 @@ const SolarSystem = () => {
 
             isSceneInitializedRef.current = true;
         }
-    }, [speed]); // Re-run the animation loop when speed changes
+    }, [speed]);
+
+    // Load font asynchronously
+    useEffect(() => {
+        const loader = new FontLoader();
+        loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
+            fontRef.current = font;
+        });
+    }, []);
 
     useEffect(() => {
-        if (planetData.length > 0) {
-            // Remove existing planet meshes (to avoid duplication)
+        if (planetData.length > 0 && fontRef.current) {
             const scene = sceneRef.current;
-            scene.children = scene.children.filter(child => child.type !== 'Mesh');
+            scene.clear(); // Clear all objects in the scene
 
-            // Add the Sun at the origin
             const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
             const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
             const sun = new THREE.Mesh(sunGeometry, sunMaterial);
             sun.position.set(0, 0, 0);
             scene.add(sun);
 
-            // Dynamically add planets from data
             planetData.forEach((planet) => {
                 const planetMesh = createPlanetMesh(planet);
                 scene.add(planetMesh);
+                createLabel(planet, planetMesh);
+
+                if (!orbitDurationsRef.current[planet.name]) {
+                    orbitDurationsRef.current[planet.name] = {
+                        startTime: timeRef.current,
+                        lastCompletion: 0,
+                        lastAngle: 0, // Store the last angle
+                    };
+                }
             });
         }
     }, [planetData]);
 
-    const createPlanetMesh = (planet) => {
-        // Adjust scale for better visibility
-        const sizeScale = 1e3; // Larger to make planets more visible
-        const positionScale = 1e9; // Adjust to space planets realistically
+    useEffect(() => {
+        if (planetData.length > 0) {
+            planetData.forEach((planet) => {
+                if (planet.name === "Sun") return; // Skip the Sun
 
-        const geometry = new THREE.SphereGeometry(Math.max(planet.radius / sizeScale, 0.5), 32, 32); // Minimum size for visibility
-        const material = new THREE.MeshBasicMaterial({
-            color: planet.name === 'Mercury' ? 0x888888 : 0xffa500,
+                const planetMesh = sceneRef.current.getObjectByName(planet.name);
+                if (planetMesh) {
+                    const orbitData = orbitDurationsRef.current[planet.name];
+
+                    // Calculate the angle of the planet in its orbit
+                    const angle = Math.atan2(planetMesh.position.y, planetMesh.position.x); // Use atan2 to get the angle
+
+                    // Check if the planet has completed an orbit
+                    if (Math.abs(angle - orbitData.lastAngle) > Math.PI) {
+                        const currentDate = new Date(date); // Current simulation date
+                        const lastOrbitDate = new Date(orbitData.lastCompletion || date); // Last orbit completion date (default to current date if undefined)
+
+                        // Log to inspect the date values
+                        console.log('Current Date:', currentDate);
+                        console.log('Last Orbit Date:', lastOrbitDate);
+
+                        // Ensure the dates are valid before calculating the difference
+                        if (!isNaN(currentDate) && !isNaN(lastOrbitDate)) {
+                            const daysElapsed = (currentDate - lastOrbitDate) / (1000 * 60 * 60 * 24); // Convert milliseconds to days
+
+                            // Log the orbit completion
+                            console.log(`${planet.name} completed an orbit in ${daysElapsed.toFixed(3)} days.`);
+
+                            // Update the last completion date
+                            orbitData.lastCompletion = date;
+                        } else {
+                            console.error('Invalid Date Detected!');
+                        }
+                    }
+
+                    // Update the last angle for next comparison
+                    orbitData.lastAngle = angle;
+                }
+            });
+        }
+    }, [planetData, date]);
+
+
+
+
+    const createLabel = (planet, planetMesh) => {
+        if (!fontRef.current) return;
+
+        const nameLabel = new TextGeometry(planet.name, {
+            font: fontRef.current,
+            size: 1,
+            depth: 0.1, // Replace height with depth
         });
-        const mesh = new THREE.Mesh(geometry, material);
-
-        mesh.position.set(
-            planet.x / positionScale,
-            planet.y / positionScale,
-            planet.z / positionScale
-        );
-
-        return mesh;
+        const nameLabelMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const labelMesh = new THREE.Mesh(nameLabel, nameLabelMaterial);
+        labelMesh.position.set(planetMesh.position.x, planetMesh.position.y + 2, planetMesh.position.z);
+        sceneRef.current.add(labelMesh);
     };
 
+    const createPlanetMesh = (planet) => {
+        const sizeScale = 1e3;
+        const positionScale = 1e9;
+
+        const geometry = new THREE.SphereGeometry(Math.max(planet.radius / sizeScale, 0.5), 32, 32);
+        const material = new THREE.MeshBasicMaterial({ color: planet.name === 'Mercury' ? 0x888888 : 0xffa500 });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.name = planet.name;
+
+        mesh.position.set(planet.x / positionScale, planet.y / positionScale, planet.z / positionScale);
+        return mesh;
+    };
 
     const handleSpeedChange = (event) => {
         const newSpeed = Number(event.target.value);
@@ -152,61 +217,16 @@ const SolarSystem = () => {
         socketRef.current.emit('adjust_speed', { speed: newSpeed });
     };
 
-    const setTopDownView = () => {
-        const camera = cameraRef.current;
-        const controls = controlsRef.current;
-
-        // Position the camera directly above the origin along the positive Z-axis
-        camera.position.set(0, 0, 100); // Move to +Z for top-down
-
-        // Look directly at the origin (Sun)
-        camera.lookAt(0, 0, 0);
-
-        // Adjust camera's "up" vector to ensure proper orientation
-        camera.up.set(0, 1, 0); // Set the Y-axis as the up direction
-
-        // Update OrbitControls to match the new camera settings
-        if (controls) {
-            controls.target.set(0, 0, 0); // Focus controls on the origin
-            controls.update();
-        }
-    };
-
-    useEffect(() => {
-        const fetchOrbitPaths = async () => {
-            try {
-                const response = await fetch('http://localhost:5000/api/orbit-paths');
-                const data = await response.json();
-                setOrbitPaths(data);
-            } catch (error) {
-                console.error('Error fetching orbit paths:', error);
-            }
-        };
-        fetchOrbitPaths();
-    }, []);
-
-
-
-
     return (
-        <div style={{ textAlign: 'center' }}>
-            <h1>Solar System 3D Simulation</h1>
-            <p>Virtual Date: {date}</p>
-            <div>
-                <label>
-                    Simulation Speed:
-                    <input
-                        type="range"
-                        min="0.1"
-                        max="10"
-                        step="0.1"
-                        value={speed}
-                        onChange={handleSpeedChange}
-                    />
-                    {speed}x
-                </label>
+        <div>
+            <div style={{ position: 'absolute', top: '10px', left: '10px', color: 'white' }}>
+                <h1>Solar System Simulation</h1>
+                <p>Date: {date}</p>
+                <div>
+                    <label>Speed:</label>
+                    <input type="range" min="0" max="10" value={speed} onChange={handleSpeedChange} />
+                </div>
             </div>
-            <button onClick={setTopDownView}>Top-Down View</button>
         </div>
     );
 };
