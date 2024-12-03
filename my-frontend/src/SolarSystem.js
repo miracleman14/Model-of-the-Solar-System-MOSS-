@@ -24,17 +24,13 @@ const SolarSystem = () => {
             try {
                 const response = await fetch('http://localhost:5000/reset');
                 const data = await response.json();
-                setPlanetData(data.planets);
-
+                setPlanetData(data.planets);  // Set planet data to the initial state
                 const socket = io('http://localhost:5000');
                 socketRef.current = socket;
 
-                socket.emit('start_simulation');
+                socket.emit('start_simulation');  // Start the simulation after reset
                 socket.on('planet_data', (data) => {
-
-                    // Truncate the microseconds from the date string (remove everything after the 3rd decimal)
-                    const truncatedDateString = data.date.substring(0, 23); // Keep up to milliseconds
-
+                    const truncatedDateString = data.date.substring(0, 23);
                     const parsedDate = new Date(truncatedDateString);
                     if (!isNaN(parsedDate)) {
                         const ukDate = parsedDate.toLocaleString('en-GB');
@@ -45,9 +41,6 @@ const SolarSystem = () => {
                     }
                     setPlanetData(data.planets);
                 });
-
-
-
             } catch (error) {
                 console.error('Error fetching planet data:', error);
             }
@@ -57,10 +50,11 @@ const SolarSystem = () => {
 
         return () => {
             if (socketRef.current) {
-                socketRef.current.disconnect();
+                socketRef.current.disconnect();  // Clean up socket connection on unmount
             }
         };
     }, []);
+
 
     useEffect(() => {
         if (!isSceneInitializedRef.current) {
