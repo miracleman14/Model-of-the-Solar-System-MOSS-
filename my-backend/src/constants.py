@@ -1,45 +1,30 @@
-from datetime import datetime
+# Gravitational constant and related constants
+G = 6.67430e-11  # Gravitational constant (m^3 kg^-1 s^-2)
+M_sun = 1.989e30  # Mass of the Sun (kg)
+dt = 60  # Default time step (60 seconds)
 
-# Current time (used as the starting point for the simulation)
-START_DATE = datetime.now()  # Current datetime
+# Predefined masses of planets in kilograms
+planetary_masses = {
+    "mercury": 3.3011e23,
+    "venus": 4.8675e24,
+    "earth": 5.97237e24,
+    "mars": 6.4171e23,
+    "jupiter": 1.8982e27,
+    "saturn": 5.6834e26,
+    "uranus": 8.6810e25,
+    "neptune": 1.02413e26,
+}
 
-# Gravitational constant (m^3 kg^-1 s^-2)
-G = 6.67430e-11
-
-# Celestial body data: mass, semi-major axis, eccentricity, orbital period (in seconds)
-CELESTIAL_BODIES = {
-    "sun": {
-        "mass": 1.989e30,  # in kg
-        "radius": 6.9634e8,  # in meters
-        "temperature": 5778,  # in Kelvin
-    },
+# Predefined orbital parameters for Mercury and Venus
+orbital_params = {
     "mercury": {
-        "mass": 3.3011e23,  # in kg
-        "a": 5.79e10,  # semi-major axis in meters
-        "e": 0.2056,  # eccentricity
-        "T": 88 * 86400,  # orbital period in seconds (88 Earth days)
-        "radius": 2.4397e6,  # in meters
+        "semi_major_axis": 0.387,  # AU
+        "eccentricity": 0.2056,
+        "orbital_period": 88,  # days
     },
     "venus": {
-        "mass": 4.8675e24,  # in kg
-        "a": 1.082e11,  # semi-major axis in meters
-        "e": 0.0067,  # eccentricity
-        "T": 225 * 86400,  # orbital period in seconds (225 Earth days)
-        "radius": 6.0518e6,  # in meters
+        "semi_major_axis": 0.723,  # AU
+        "eccentricity": 0.0067,
+        "orbital_period": 225,  # days
     },
-    "earth": {
-        "mass": 5.972e24,  # in kg
-        "a": 1.496e11,  # semi-major axis in meters
-        "e": 0.0167,  # eccentricity
-        "T": 365.25 * 86400,  # orbital period in seconds (365.25 Earth days)
-        "radius": 6.371e6,  # in meters
-    },
-    "mars": {
-        "mass": 6.4171e23,  # in kg
-        "a": 2.279e11,  # semi-major axis in meters
-        "e": 0.0934,  # eccentricity
-        "T": 687 * 86400,  # orbital period in seconds (687 Earth days)
-        "radius": 3.3962e6,  # in meters
-    },
-    # Add other planets similarly (Jupiter, Saturn, etc.)
 }

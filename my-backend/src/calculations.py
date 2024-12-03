@@ -17,9 +17,9 @@ def calculate_forces(planets):
             if p1 != p2:
                 dx = p2['x'] - p1['x']
                 dy = p2['y'] - p1['y']
-                dz = p2['z'] - p1['z']  # Calculate the difference in z-axis
+                dz = p2['z'] - p1['z']
                 distance = math.sqrt(dx**2 + dy**2 + dz**2)
-                distance = max(distance, epsilon)
+                distance = max(distance, 1e-5)
 
                 # Calculate gravitational force
                 force = G * p1['mass'] * p2['mass'] / distance**2
@@ -32,8 +32,7 @@ def calculate_forces(planets):
         # Update acceleration for p1 (including z-axis)
         p1['ax'] = fx / p1['mass']
         p1['ay'] = fy / p1['mass']
-        p1['az'] = fz / p1['mass']  # Update z-axis acceleration
-
+        p1['az'] = fz / p1['mass']
 
 def verlet_step(planets, dt):
     """
@@ -43,18 +42,18 @@ def verlet_step(planets, dt):
         # Update positions based on velocities and accelerations
         p['x'] += p['vx'] * dt + 0.5 * p['ax'] * dt**2
         p['y'] += p['vy'] * dt + 0.5 * p['ay'] * dt**2
-        p['z'] += p['vz'] * dt + 0.5 * p['az'] * dt**2  # Added z-axis update
+        p['z'] += p['vz'] * dt + 0.5 * p['az'] * dt**2
 
     for p in planets:
-        p['prev_ax'], p['prev_ay'], p['prev_az'] = p['ax'], p['ay'], p['az']  # Track previous accelerations
+        p['prev_ax'], p['prev_ay'], p['prev_az'] = p['ax'], p['ay'], p['az']
 
-    # Recalculate forces
+    # Recalculate forces based on new positions
     calculate_forces(planets)
 
     for p in planets:
         p['vx'] += 0.5 * (p['prev_ax'] + p['ax']) * dt
         p['vy'] += 0.5 * (p['prev_ay'] + p['ay']) * dt
-        p['vz'] += 0.5 * (p['prev_az'] + p['az']) * dt  # Updated velocity in z
+        p['vz'] += 0.5 * (p['prev_az'] + p['az']) * dt
 
 
 
