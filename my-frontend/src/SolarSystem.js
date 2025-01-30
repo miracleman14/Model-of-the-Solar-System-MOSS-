@@ -4,6 +4,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import io from 'socket.io-client';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import './SolarSystem.css';
+
 
 const SolarSystem = () => {
     const [planetData, setPlanetData] = useState([]);
@@ -18,6 +20,7 @@ const SolarSystem = () => {
     const orbitDurationsRef = useRef({}); // Store orbit data
     const controlsRef = useRef(null);
     const fontRef = useRef(null);
+    const [isPaused, setIsPaused] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -55,6 +58,21 @@ const SolarSystem = () => {
         };
     }, []);
 
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/get-simulation-state');
+                const data = await response.json();
+                setPlanetData(data.planets);
+                setDate(data.date); // Use the fetched date
+            } catch (error) {
+                console.error('Error fetching planet data:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
+
 
     useEffect(() => {
         if (!isSceneInitializedRef.current) {
@@ -67,7 +85,10 @@ const SolarSystem = () => {
 
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+
+            const container = document.getElementById('solar-system-container');
+            if (container) container.appendChild(renderer.domElement);
+
             rendererRef.current = renderer;
 
             const light = new THREE.PointLight(0xffffff, 1, 1000);
@@ -109,13 +130,14 @@ const SolarSystem = () => {
     useEffect(() => {
         if (planetData.length > 0 && fontRef.current) {
             const scene = sceneRef.current;
-            scene.clear(); // Clear all objects in the scene
+            scene.clear();
 
-            const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
+            const sunGeometry = new THREE.SphereGeometry(109 / 5, 64, 64); // Adjust Sun size for better prominence
             const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
             const sun = new THREE.Mesh(sunGeometry, sunMaterial);
             sun.position.set(0, 0, 0);
             scene.add(sun);
+
 
             planetData.forEach((planet) => {
                 const planetMesh = createPlanetMesh(planet);
@@ -126,7 +148,7 @@ const SolarSystem = () => {
                     orbitDurationsRef.current[planet.name] = {
                         startTime: timeRef.current,
                         lastCompletion: 0,
-                        lastAngle: 0, // Store the last angle
+                        lastAngle: 0,
                     };
                 }
             });
@@ -183,27 +205,79 @@ const SolarSystem = () => {
 
         const nameLabel = new TextGeometry(planet.name, {
             font: fontRef.current,
-            size: 1,
-            depth: 0.1, // Replace height with depth
+            size: 1.5, // Adjust label size for better visibility
+            depth: 0.1,
         });
+
         const nameLabelMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const labelMesh = new THREE.Mesh(nameLabel, nameLabelMaterial);
-        labelMesh.position.set(planetMesh.position.x, planetMesh.position.y + 2, planetMesh.position.z);
+
+        // Dynamic offset based on the planet's size
+        const labelOffset = Math.max(
+            planetMesh.geometry.parameters.radius * 1.5, // Use planet radius for label position
+            2 // Ensure a minimum offset
+        );
+
+        labelMesh.position.set(
+            planetMesh.position.x,
+            planetMesh.position.y + labelOffset, // Position label above the planet
+            planetMesh.position.z
+        );
+
         sceneRef.current.add(labelMesh);
     };
 
-    const createPlanetMesh = (planet) => {
-        const sizeScale = 1e3;
-        const positionScale = 1e9;
 
-        const geometry = new THREE.SphereGeometry(Math.max(planet.radius / sizeScale, 0.5), 32, 32);
-        const material = new THREE.MeshBasicMaterial({ color: planet.name === 'Mercury' ? 0x888888 : 0xffa500 });
+
+    const createPlanetMesh = (planet) => {
+        const sizeScale = 500; // Adjust size scaling for better visibility
+        const positionScale = 1e9; // Keep position scaling consistent
+
+        // Define colours for each planet
+        const planetColors = {
+            "Mercury": 0x888888,
+            "Venus": 0xffd700,
+            "Earth": 0x0000ff,
+            "Mars": 0xff4500,
+            "Jupiter": 0xd2691e,
+            "Saturn": 0xd2b48c,
+            "Uranus": 0x40e0d0,
+            "Neptune": 0x00008b,
+            "Sun": 0xffff00, // Add Sun's colour
+        };
+
+        // Define sizes for each planet
+        const planetSizes = {
+            "Mercury": 0.38,
+            "Venus": 0.95,
+            "Earth": 1.0,
+            "Mars": 0.53,
+            "Jupiter": 11.21,
+            "Saturn": 9.45,
+            "Uranus": 4.01,
+            "Neptune": 3.88,
+            "Sun": 109.0, // Scaled size of the Sun
+        };
+
+        const geometry = new THREE.SphereGeometry(
+            Math.max(planet.radius / sizeScale * planetSizes[planet.name], 0.5),
+            32,
+            32
+        );
+        const material = new THREE.MeshBasicMaterial({ color: planetColors[planet.name] });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.name = planet.name;
 
-        mesh.position.set(planet.x / positionScale, planet.y / positionScale, planet.z / positionScale);
+        // Position planets based on their actual distance, scaled down
+        mesh.position.set(
+            planet.x / positionScale,
+            planet.y / positionScale,
+            planet.z / positionScale
+        );
         return mesh;
     };
+
+
 
     const handleSpeedChange = (event) => {
         const newSpeed = Number(event.target.value);
@@ -211,15 +285,32 @@ const SolarSystem = () => {
         socketRef.current.emit('adjust_speed', { speed: newSpeed });
     };
 
+    const handleSimulationToggle = () => {
+        const socket = socketRef.current;
+        if (isPaused) {
+            socket.emit('start_simulation'); // Resume simulation
+        } else {
+            socket.emit('stop_simulation'); // Pause simulation
+        }
+        setIsPaused(!isPaused); // Toggle pause state
+    };
+
     return (
         <div>
-            <div style={{ position: 'absolute', top: '10px', left: '10px', color: 'white' }}>
+            <div style={{position: 'absolute', top: '10px', left: '10px', color: 'white'}}>
                 <h1>Solar System Simulation</h1>
                 <p>Date: {date}</p>
                 <div>
                     <label>Speed:</label>
-                    <input type="range" min="0" max="10" value={speed} onChange={handleSpeedChange} />
+                    <input type="range" min="0" max="10" value={speed} onChange={handleSpeedChange}/>
                 </div>
+            </div>
+
+            <div>
+                <button onClick={handleSimulationToggle}>
+                    {isPaused ? 'Resume Simulation' : 'Pause Simulation'}
+                </button>
+                <div id="solar-system-container" ref={sceneRef}></div>
             </div>
         </div>
     );

@@ -1,0 +1,120 @@
+/* General Page Styles */
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, #000428, #004e92);
+    font-family: 'Arial', sans-serif;
+    color: white;
+    overflow: hidden;
+}
+
+#solar-system-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute; /* Ensure it's on top of the background but below UI */
+    z-index: -1; /* Set a lower z-index to make sure the UI is above it */
+}
+
+button {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000; /* Make sure the button is above everything */
+}
+
+
+/* Header Section */
+header {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.8em;
+}
+
+header p {
+    margin: 5px 0;
+    font-size: 1.2em;
+}
+
+/* Speed Control */
+header label {
+    font-size: 1em;
+}
+
+header input[type="range"] {
+    width: 100%;
+    margin-top: 5px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #0078d4;
+    height: 5px;
+    border-radius: 5px;
+    outline: none;
+    cursor: pointer;
+}
+
+header input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Pause Button */
+button {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    padding: 10px 20px;
+    font-size: 1.2em;
+    color: white;
+    background: #ff5722;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    background: #e64a19;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    header {
+        width: 90%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    button {
+        bottom: 15px;
+        right: 15px;
+        font-size: 1em;
+        padding: 8px 15px;
+    }
+}
+
+

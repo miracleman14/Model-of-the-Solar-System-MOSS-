@@ -27,4 +27,34 @@ orbital_params = {
         "eccentricity": 0.0067,
         "orbital_period": 225,  # days
     },
+    "earth": {
+        "semi_major_axis": 1.00000011  ,  # AU
+        "eccentricity": 0.017,
+        "orbital_period": 365.2,  # days
+    },
+    "mars": {
+        "semi_major_axis": 1.524,  # AU
+        "eccentricity": 0.094,
+        "orbital_period": 687.0,  # days
+    },
+    "jupiter": {
+        "semi_major_axis": 5.204,  # AU
+        "eccentricity": 0.049,
+        "orbital_period": 4331,  # days
+    },
+    "saturn": {
+        "semi_major_axis": 9.573,  # AU
+        "eccentricity": 0.052,
+        "orbital_period": 10747,  # days
+    },
+    "uranus": {
+        "semi_major_axis": 19.165,  # AU
+        "eccentricity": 0.047,
+        "orbital_period": 30589, # days
+    },
+    "neptune": {
+        "semi_major_axis": 30.178,  # AU
+        "eccentricity": 0.010,
+        "orbital_period": 59800,  # days
+    },
 }

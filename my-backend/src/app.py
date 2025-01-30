@@ -25,7 +25,14 @@ sun = eph['sun']
 planets_skyfield = {
     "mercury": eph['mercury'],
     "venus": eph['venus'],
+    "earth": eph['earth'],
+    "mars": eph['mars barycenter'],
+    "jupiter": eph['jupiter barycenter'],
+    "saturn": eph['saturn barycenter'],
+    "uranus": eph['uranus barycenter'],
+    "neptune": eph['neptune barycenter'],
 }
+
 
 
 
@@ -187,6 +194,8 @@ def start_simulation():
             # Increment virtual date
             virtual_date += timedelta(seconds=safe_dt)
 
+
+
             # Check for orbit completion
             for planet in planets:
                 if planet['name'] != "Sun":
@@ -218,7 +227,7 @@ def start_simulation():
 
             # Send updated data to the frontend
             planet_data = [
-                planet for planet in planets if planet['name'] in ['Mercury', 'Venus']
+                planet for planet in planets if planet['name'] in ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']
             ]
             socketio.emit('planet_data', {'planets': planet_data, 'date': virtual_date.isoformat()})
 
@@ -244,11 +253,25 @@ planets = fetch_real_positions_for_today()
 initial_planets = planets.copy()
 
 
+simulation_state = {
+    "planets": fetch_real_positions_for_today(),
+    "virtual_date": datetime.now()
+}
+
 @app.route('/reset')
 def reset_simulation():
-    global planets
-    planets = [dict(planet) for planet in initial_planets]
-    return jsonify({"message": "Simulation reset", "planets": planets})
+    global simulation_state
+    simulation_state['planets'] = [dict(planet) for planet in initial_planets]
+    simulation_state['virtual_date'] = datetime.now()  # Reset the virtual date
+    return jsonify({"message": "Simulation reset", "planets": simulation_state['planets']})
+
+@app.route('/api/get-simulation-state')
+def get_simulation_state():
+    return jsonify({
+        "planets": simulation_state['planets'],
+        "date": simulation_state['virtual_date'].isoformat()
+    })
+
 
 
 @app.route('/api/planet-data')
