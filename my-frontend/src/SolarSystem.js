@@ -5,12 +5,15 @@ import io from 'socket.io-client';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import './SolarSystem.css';
+import PlanetModal from './PlanetModal'; // Import the modal
+
 
 
 const SolarSystem = () => {
     const [planetData, setPlanetData] = useState([]);
     const [date, setDate] = useState('');
     const [speed, setSpeed] = useState(1);
+    const [selectedPlanet, setSelectedPlanet] = useState(null); // Track selected planet
     const sceneRef = useRef(null);
     const cameraRef = useRef(null);
     const rendererRef = useRef(null);
@@ -21,6 +24,8 @@ const SolarSystem = () => {
     const controlsRef = useRef(null);
     const fontRef = useRef(null);
     const [isPaused, setIsPaused] = useState(false);
+    const raycasterRef = useRef(new THREE.Raycaster());  // Raycaster to detect clicks
+    const mouseRef = useRef(new THREE.Vector2());  // Store mouse position
 
     useEffect(() => {
         const fetchData = async () => {
@@ -79,8 +84,8 @@ const SolarSystem = () => {
             const scene = new THREE.Scene();
             sceneRef.current = scene;
 
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
-            camera.position.z = 50;
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000);
+            camera.position.z = 1000; // Set the camera further away from the Sun
             cameraRef.current = camera;
 
             const renderer = new THREE.WebGLRenderer();
@@ -99,6 +104,8 @@ const SolarSystem = () => {
             controls.enableDamping = true;
             controls.dampingFactor = 0.2;
             controls.screenSpacePanning = true;
+            controls.minDistance = 100;
+            controls.maxDistance = 50000;
             controlsRef.current = controls;
 
             const animate = () => {
@@ -115,9 +122,59 @@ const SolarSystem = () => {
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
+            window.addEventListener('click', onClick);  // Add click event listener
+
             isSceneInitializedRef.current = true;
         }
     }, [speed]);
+
+    const onClick = (event) => {
+        mouseRef.current.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouseRef.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+
+        // Find intersected objects
+        const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true); // Set recursive to true
+
+        if (intersects.length > 0) {
+            const clickedPlanet = intersects[0].object;
+            if (clickedPlanet.name !== "Sun") {
+                setSelectedPlanet(clickedPlanet); // Set the selected planet
+                centreCameraOnPlanet(clickedPlanet); // Center the camera on the clicked planet
+            }
+        }
+    };
+
+    // Close the modal
+    const closeModal = () => {
+        setSelectedPlanet(null);
+    };
+
+    const centreCameraOnPlanet = (planetMesh) => {
+        const targetPosition = planetMesh.position.clone();
+        const camera = cameraRef.current;
+
+        // Smoothly animate the camera to the planet position
+        const duration = 1; // Animation duration in seconds
+        const startPos = camera.position.clone();
+        const startTime = performance.now();
+
+        const animateCamera = () => {
+            const elapsedTime = (performance.now() - startTime) / 1000;
+            const t = Math.min(elapsedTime / duration, 1);
+
+            // Interpolate camera position
+            camera.position.lerpVectors(startPos, targetPosition, t);
+            controlsRef.current.update();
+
+            if (t < 1) {
+                requestAnimationFrame(animateCamera);
+            }
+        };
+
+        animateCamera();
+    };
 
     // Load font asynchronously
     useEffect(() => {
@@ -230,8 +287,8 @@ const SolarSystem = () => {
 
 
     const createPlanetMesh = (planet) => {
-        const sizeScale = 500; // Adjust size scaling for better visibility
-        const positionScale = 1e9; // Keep position scaling consistent
+        const sizeScale = 200; // Increased size scaling for better visibility
+        const positionScale = 5e8; // Adjust position scaling for clearer spacing between planets
 
         // Define colours for each planet
         const planetColors = {
@@ -242,8 +299,8 @@ const SolarSystem = () => {
             "Jupiter": 0xd2691e,
             "Saturn": 0xd2b48c,
             "Uranus": 0x40e0d0,
-            "Neptune": 0x00008b,
-            "Sun": 0xffff00, // Add Sun's colour
+            "Neptune": 0x00008b, // Neptune color
+            "Sun": 0xffff00, // Sun's colour
         };
 
         // Define sizes for each planet
@@ -255,16 +312,32 @@ const SolarSystem = () => {
             "Jupiter": 11.21,
             "Saturn": 9.45,
             "Uranus": 4.01,
-            "Neptune": 3.88,
+            "Neptune": 3.88, // Neptune size
             "Sun": 109.0, // Scaled size of the Sun
         };
 
         const geometry = new THREE.SphereGeometry(
-            Math.max(planet.radius / sizeScale * planetSizes[planet.name], 0.5),
-            32,
-            32
+            Math.max(planet.radius / sizeScale * planetSizes[planet.name], 1), // Increased size scaling
+            64,  // Increased detail for a clearer sphere
+            64   // Increased detail for a clearer sphere
         );
-        const material = new THREE.MeshBasicMaterial({ color: planetColors[planet.name] });
+
+        let material;
+
+        // Special case for Sun to make it bigger and glow
+        if (planet.name === "Sun") {
+            material = new THREE.MeshBasicMaterial({
+                color: planetColors[planet.name],
+                emissive: 0xffff00, // Sun's glowing yellow light
+                emissiveIntensity: 1.5, // Increase the glow intensity
+            });
+        } else {
+            material = new THREE.MeshBasicMaterial({
+                color: planetColors[planet.name],
+                emissive: planet.name === "Neptune" ? 0x0000ff : 0x000000, // Make Neptune brighter
+            });
+        }
+
         const mesh = new THREE.Mesh(geometry, material);
         mesh.name = planet.name;
 
@@ -274,8 +347,17 @@ const SolarSystem = () => {
             planet.y / positionScale,
             planet.z / positionScale
         );
+
+        // Make Neptune slightly bigger for better visibility
+        if (planet.name === "Neptune") {
+            mesh.scale.set(1.2, 1.2, 1.2); // Increase Neptune's size a bit more
+        }
+
         return mesh;
     };
+
+
+
 
 
 
@@ -297,12 +379,12 @@ const SolarSystem = () => {
 
     return (
         <div>
-            <div style={{position: 'absolute', top: '10px', left: '10px', color: 'white'}}>
+            <div style={{ position: 'absolute', top: '10px', left: '10px', color: 'white' }}>
                 <h1>Solar System Simulation</h1>
                 <p>Date: {date}</p>
                 <div>
                     <label>Speed:</label>
-                    <input type="range" min="0" max="10" value={speed} onChange={handleSpeedChange}/>
+                    <input type="range" min="0" max="10" value={speed} onChange={handleSpeedChange} />
                 </div>
             </div>
 
@@ -312,6 +394,14 @@ const SolarSystem = () => {
                 </button>
                 <div id="solar-system-container" ref={sceneRef}></div>
             </div>
+
+            {/* Render the modal if a planet is selected */}
+            {selectedPlanet && (
+                <PlanetModal
+                    planet={selectedPlanet}
+                    onClose={closeModal}
+                />
+            )}
         </div>
     );
 };
