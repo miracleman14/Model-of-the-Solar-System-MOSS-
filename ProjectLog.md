@@ -16,9 +16,8 @@ This document logs the progress of the Model of the Solar System project, detail
   - **React Project**: Initialised project using React.
   - **Dependencies**: Installed necessary libraries such as `Three.js` for 3D rendering.
 
-### Initial Planet Plotting
+### Ensure simulation start positions are accurate
 - Plotted the Sun, Mercury, and Venus at specific positions and times.
-- Added **Sun** as a fixed central point in the simulation.
   
 ### Basic Orbital Simulation
 - Developed the algorithm to:
@@ -35,16 +34,21 @@ This document logs the progress of the Model of the Solar System project, detail
   - **Orbit Controls**: Added orbit controls to move camera around
   - **Fixed date**: Fixed issues with date glitching after refresh
 
+### Added basic UI features
+- Added a UI that composes of:
+  - **Camera panning on clicked planet**: When planet is clicked the camera will focus on that planet.
+  - **Homepage**: Very basic homepage added with start simulation button that works.
+
 ---
 
 ## Ongoing Tasks
-- Ensure simulation start positions are accurate
-- Validate simulation completely
+- Working on improving clickable Functionality
+- Ensuring there is a home page to start simulation
 
 ---
 
 ## Planned Tasks
-- Continue adding planetary bodies (Earth, Mars, Jupiter, etc.).
+- Adding harder bodies such as pluto, comets and the moon
 - Implement time-based progression control for user-defined dates.
 - Allow user to go back in time
 
@@ -55,4 +59,4 @@ This log will be updated as the project progresses, with each milestone and comp
 
 ---
 
-_Last updated: [28/11/2024]_
+_Last updated: [01/02/2025]_
