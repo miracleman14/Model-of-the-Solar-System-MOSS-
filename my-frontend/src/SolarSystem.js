@@ -7,13 +7,12 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import './SolarSystem.css';
 import PlanetModal from './PlanetModal'; // Import the modal
 
-
-
 const SolarSystem = () => {
     const [planetData, setPlanetData] = useState([]);
     const [date, setDate] = useState('');
     const [speed, setSpeed] = useState(1);
     const [selectedPlanet, setSelectedPlanet] = useState(null); // Track selected planet
+    const [orbitPaths, setOrbitPaths] = useState({}); // Initialize orbit paths state
     const sceneRef = useRef(null);
     const cameraRef = useRef(null);
     const rendererRef = useRef(null);
@@ -26,6 +25,7 @@ const SolarSystem = () => {
     const [isPaused, setIsPaused] = useState(false);
     const raycasterRef = useRef(new THREE.Raycaster());  // Raycaster to detect clicks
     const mouseRef = useRef(new THREE.Vector2());  // Store mouse position
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar state
 
     useEffect(() => {
         const fetchData = async () => {
@@ -35,7 +35,6 @@ const SolarSystem = () => {
                 setPlanetData(data.planets);  // Set planet data to the initial state
                 const socket = io('http://localhost:5000');
                 socketRef.current = socket;
-
                 socket.emit('start_simulation');  // Start the simulation after reset
                 socket.on('planet_data', (data) => {
                     const truncatedDateString = data.date.substring(0, 23);
@@ -53,9 +52,7 @@ const SolarSystem = () => {
                 console.error('Error fetching planet data:', error);
             }
         };
-
         fetchData();
-
         return () => {
             if (socketRef.current) {
                 socketRef.current.disconnect();  // Clean up socket connection on unmount
@@ -74,26 +71,20 @@ const SolarSystem = () => {
                 console.error('Error fetching planet data:', error);
             }
         };
-
         fetchData();
     }, []);
-
 
     useEffect(() => {
         if (!isSceneInitializedRef.current) {
             const scene = new THREE.Scene();
             sceneRef.current = scene;
-
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000);
             camera.position.z = 1000; // Set the camera further away from the Sun
             cameraRef.current = camera;
-
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
-
             const container = document.getElementById('solar-system-container');
             if (container) container.appendChild(renderer.domElement);
-
             rendererRef.current = renderer;
 
             const light = new THREE.PointLight(0xffffff, 1, 1000);
@@ -122,50 +113,94 @@ const SolarSystem = () => {
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
-            window.addEventListener('click', onClick);  // Add click event listener
-
             isSceneInitializedRef.current = true;
         }
     }, [speed]);
 
-    const onClick = (event) => {
-        mouseRef.current.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouseRef.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    useEffect(() => {
+        if (planetData.length > 0 && sceneRef.current) {
+            const updatedPaths = { ...orbitPaths };
 
-        raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+            planetData.forEach((planet) => {
+                if (planet.name === "Sun") return; // Skip the Sun
 
-        // Find intersected objects
-        const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true); // Set recursive to true
+                const planetMesh = sceneRef.current.getObjectByName(planet.name);
+                if (planetMesh) {
+                    const currentPosition = planetMesh.position.clone();
 
-        if (intersects.length > 0) {
-            const clickedPlanet = intersects[0].object;
-            if (clickedPlanet.name !== "Sun") {
-                setSelectedPlanet(clickedPlanet); // Set the selected planet
-                centreCameraOnPlanet(clickedPlanet); // Center the camera on the clicked planet
-            }
+                    // Add the current position to the orbit path
+                    if (!updatedPaths[planet.name]) {
+                        updatedPaths[planet.name] = [];
+                    }
+                    updatedPaths[planet.name].push(currentPosition);
+
+                    // Dynamically calculate the maximum trail length
+                    const maxTrailLength = Math.max(1000, planet.orbitalPeriod * 10); // Example logic
+                    if (updatedPaths[planet.name].length > maxTrailLength) {
+                        updatedPaths[planet.name].shift(); // Remove the oldest point
+                    }
+                }
+            });
+
+            setOrbitPaths(updatedPaths);
         }
-    };
+    }, [planetData]);
 
-    // Close the modal
+    useEffect(() => {
+        if (sceneRef.current) {
+            // Clear existing orbit lines
+            sceneRef.current.children = sceneRef.current.children.filter(
+                (child) => !child.isLine
+            );
+
+            // Render new orbit lines
+            Object.keys(orbitPaths).forEach((planetName) => {
+                const points = orbitPaths[planetName];
+
+                if (points.length > 1) {
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const material = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+                    const orbitLine = new THREE.Line(geometry, material);
+                    orbitLine.name = `${planetName}-orbit`;
+                    sceneRef.current.add(orbitLine);
+                }
+            });
+        }
+    }, [orbitPaths]);
+
+
     const closeModal = () => {
         setSelectedPlanet(null);
     };
 
-    const centreCameraOnPlanet = (planetMesh) => {
+    const centreCameraOnPlanet = (planetName) => {
+        const planetMesh = sceneRef.current.getObjectByName(planetName);
+        if (!planetMesh) return;
+
         const targetPosition = planetMesh.position.clone();
         const camera = cameraRef.current;
 
+        // Add an offset to the camera position for better framing
+        const cameraOffset = new THREE.Vector3(0, 0, 300); // Adjust the Z-offset as needed
+        const finalPosition = targetPosition.clone().add(cameraOffset);
+
         // Smoothly animate the camera to the planet position
-        const duration = 1; // Animation duration in seconds
+        const duration = 1.5; // Animation duration in seconds
+        const easing = (t) => t * t * (3 - 2 * t); // Cubic easing function for smooth transitions
         const startPos = camera.position.clone();
         const startTime = performance.now();
 
         const animateCamera = () => {
             const elapsedTime = (performance.now() - startTime) / 1000;
             const t = Math.min(elapsedTime / duration, 1);
+            const easedT = easing(t); // Apply easing
 
             // Interpolate camera position
-            camera.position.lerpVectors(startPos, targetPosition, t);
+            camera.position.lerpVectors(startPos, finalPosition, easedT);
+
+            // Adjust the controls target to follow the camera
+            controlsRef.current.target.lerp(targetPosition, easedT);
+
             controlsRef.current.update();
 
             if (t < 1) {
@@ -176,7 +211,13 @@ const SolarSystem = () => {
         animateCamera();
     };
 
-    // Load font asynchronously
+    const focusOnPluto = () => {
+        const plutoMesh = sceneRef.current.getObjectByName("Pluto");
+        if (plutoMesh) {
+            centreCameraOnPlanet(plutoMesh);
+        }
+    };
+
     useEffect(() => {
         const loader = new FontLoader();
         loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', (font) => {
@@ -194,7 +235,6 @@ const SolarSystem = () => {
             const sun = new THREE.Mesh(sunGeometry, sunMaterial);
             sun.position.set(0, 0, 0);
             scene.add(sun);
-
 
             planetData.forEach((planet) => {
                 const planetMesh = createPlanetMesh(planet);
@@ -254,9 +294,6 @@ const SolarSystem = () => {
         }
     }, [planetData, date]);
 
-
-
-
     const createLabel = (planet, planetMesh) => {
         if (!fontRef.current) return;
 
@@ -284,8 +321,6 @@ const SolarSystem = () => {
         sceneRef.current.add(labelMesh);
     };
 
-
-
     const createPlanetMesh = (planet) => {
         const sizeScale = 200; // Increased size scaling for better visibility
         const positionScale = 5e8; // Adjust position scaling for clearer spacing between planets
@@ -300,6 +335,7 @@ const SolarSystem = () => {
             "Saturn": 0xd2b48c,
             "Uranus": 0x40e0d0,
             "Neptune": 0x00008b, // Neptune color
+            "Pluto": 0xa9a9a9, // Pluto color (greyish)
             "Sun": 0xffff00, // Sun's colour
         };
 
@@ -313,6 +349,7 @@ const SolarSystem = () => {
             "Saturn": 9.45,
             "Uranus": 4.01,
             "Neptune": 3.88, // Neptune size
+            "Pluto": 0.18, // Pluto is much smaller than other planets
             "Sun": 109.0, // Scaled size of the Sun
         };
 
@@ -356,11 +393,6 @@ const SolarSystem = () => {
         return mesh;
     };
 
-
-
-
-
-
     const handleSpeedChange = (event) => {
         const newSpeed = Number(event.target.value);
         setSpeed(newSpeed);
@@ -377,29 +409,86 @@ const SolarSystem = () => {
         setIsPaused(!isPaused); // Toggle pause state
     };
 
-    return (
-        <div>
-            <div style={{ position: 'absolute', top: '10px', left: '10px', color: 'white' }}>
-                <h1>Solar System Simulation</h1>
-                <p>Date: {date}</p>
-                <div>
-                    <label>Speed:</label>
-                    <input type="range" min="0" max="10" value={speed} onChange={handleSpeedChange} />
-                </div>
-            </div>
+    const handlePlanetClick = (planetName) => {
+        // Find the full planet object from planetData
+        const selectedPlanetObject = planetData.find((planet) => planet.name === planetName);
+        setSelectedPlanet(selectedPlanetObject); // Set the full planet object
+        centreCameraOnPlanet(planetName);
+        setIsSidebarOpen(false); // Close sidebar after selecting a planet
+    };
 
-            <div>
-                <button onClick={handleSimulationToggle}>
+    const renderSidebar = () => {
+        if (!isSidebarOpen) return null; // Only render if sidebar is open
+        const planets = ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"];
+        return (
+            <div className="sidebar open">
+                <h3>Planets</h3>
+                <ul>
+                    {planets.map((planet) => (
+                        <li
+                            key={planet}
+                            onClick={() => {
+                                handlePlanetClick(planet);
+                                setIsSidebarOpen(false); // Close sidebar on selection
+                            }}
+                            style={{
+                                fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {planet}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        );
+    };
+
+    return (
+        <div className="app-container">
+            {/* Title */}
+            <h1>Solar System Simulation</h1>
+
+            {/* Controls Container (Moved to the Right) */}
+            <div className="controls-container">
+                <p>Date: {date}</p>
+                <div className="speed-control">
+                    <label>Speed:</label>
+                    <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={speed}
+                        onChange={handleSpeedChange}
+                    />
+                </div>
+                <button
+                    className="simulation-controls"
+                    onClick={handleSimulationToggle}
+                >
                     {isPaused ? 'Resume Simulation' : 'Pause Simulation'}
                 </button>
-                <div id="solar-system-container" ref={sceneRef}></div>
             </div>
+
+            {/* Sidebar Toggle Button */}
+            <button
+                className="sidebar-toggle"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+                {isSidebarOpen ? 'Close' : 'Planets'}
+            </button>
+
+            {/* Render the Sidebar */}
+            {renderSidebar()}
+
+            {/* Solar System Container */}
+            <div id="solar-system-container"></div>
 
             {/* Render the modal if a planet is selected */}
             {selectedPlanet && (
                 <PlanetModal
                     planet={selectedPlanet}
-                    onClose={closeModal}
+                    onClose={() => setSelectedPlanet(null)}
                 />
             )}
         </div>

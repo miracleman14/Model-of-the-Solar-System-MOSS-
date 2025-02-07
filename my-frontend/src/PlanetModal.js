@@ -14,6 +14,7 @@ const PlanetModal = ({ planet, onClose }) => {
         Saturn: { description: "Known for its stunning rings.", gravity: "10.44 m/s²", moons: 83 },
         Uranus: { description: "An ice giant with a unique sideways rotation.", gravity: "8.69 m/s²", moons: 27 },
         Neptune: { description: "The farthest planet from the Sun.", gravity: "11.15 m/s²", moons: 14 },
+        Pluto: { description: "A dwarf planet located in the Kuiper Belt.", gravity: "0.62 m/s²", moons: 5 }, // Pluto added here
     };
 
     const details = planetDetails[planet.name] || { description: "No details available." };

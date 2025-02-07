@@ -1,120 +1,277 @@
-/* General Page Styles */
-body {
+/* General Reset */
+* {
     margin: 0;
     padding: 0;
-    background: linear-gradient(to bottom, #000428, #004e92);
-    font-family: 'Arial', sans-serif;
-    color: white;
-    overflow: hidden;
+    box-sizing: border-box;
 }
 
-#solar-system-container {
+body {
+    font-family: 'Poppins', sans-serif; /* Modern font */
+    background: linear-gradient(135deg, #0a0a23, #000000); /* Gradient space theme */
+    color: #ffffff;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Container for the entire app */
+.app-container {
+    position: relative;
     width: 100vw;
     height: 100vh;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    position: absolute; /* Ensure it's on top of the background but below UI */
-    z-index: -1; /* Set a lower z-index to make sure the UI is above it */
+    justify-content: center;
 }
 
-button {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000; /* Make sure the button is above everything */
+/* Title Styling */
+h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 10px;
+    color: #ffcc00; /* Gold color for a solar system feel */
+    text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px #ffcc00;
+    letter-spacing: 2px;
+    animation: glow 2s infinite alternate; /* Subtle glowing effect */
 }
 
+@keyframes glow {
+    from {
+        text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px #ffcc00;
+    }
+    to {
+        text-shadow: 2px 2px 15px rgba(0, 0, 0, 0.7), 0 0 30px #ffcc00;
+    }
+}
 
-/* Header Section */
-header {
+/* Controls Container */
+.controls-container {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 1000;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 10px;
+    top: 20px;
+    right: 20px; /* Moved to the right */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px; /* Space between controls */
     padding: 15px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px); /* Frosted glass effect */
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    z-index: 10;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 1.8em;
+/* Date Display */
+.controls-container p {
+    font-size: 1.2rem;
+    color: #ffffff;
+    font-weight: 500;
+    text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
 }
 
-header p {
-    margin: 5px 0;
-    font-size: 1.2em;
+/* Speed Control Styling */
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-/* Speed Control */
-header label {
-    font-size: 1em;
+.speed-control label {
+    font-size: 1rem;
+    color: #ffffff;
+    font-weight: 500;
 }
 
-header input[type="range"] {
-    width: 100%;
-    margin-top: 5px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: #0078d4;
-    height: 5px;
-    border-radius: 5px;
+.speed-control input[type="range"] {
+    width: 200px;
+    height: 12px;
+    background: linear-gradient(to right, #ffcc00, #ff6600);
+    border-radius: 10px;
     outline: none;
-    cursor: pointer;
-}
-
-header input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 15px;
-    height: 15px;
-    background: white;
-    border-radius: 50%;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    transition: background 0.3s ease;
 }
 
-/* Pause Button */
-button {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-    padding: 10px 20px;
-    font-size: 1.2em;
-    color: white;
-    background: #ff5722;
-    border: none;
-    border-radius: 5px;
+.speed-control input[type="range"]:hover {
+    background: linear-gradient(to right, #ff6600, #ffcc00);
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #ffcc00;
+    border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 2px solid #ffffff;
+}
+
+.speed-control input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #ffcc00;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 2px solid #ffffff;
+}
+
+/* Pause/Resume Button Styling */
+.simulation-controls {
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.simulation-controls:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Sidebar Styling */
+.sidebar {
+    position: absolute;
+    top: 20px;
+    left: -320px; /* Initially hidden off-screen */
+    width: 280px;
+    height: auto;
+    background: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
+    backdrop-filter: blur(10px); /* Frosted glass effect */
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+    transition: left 0.3s ease-in-out; /* Smooth transition for opening/closing */
+}
+
+.sidebar.open {
+    left: 20px; /* Move into view when open */
+}
+
+.sidebar h3 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #ffcc00;
+    text-align: center;
+    text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
+    letter-spacing: 1px;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar li {
+    margin: 12px 0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 1rem;
+    font-weight: 500;
+    color: #ffffff;
+}
+
+.sidebar li:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar li.bold {
+    font-weight: bold;
+    color: #ffcc00;
+    text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    z-index: 11; /* Ensure it's above the sidebar */
+}
+
+.sidebar-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Solar System Container */
+#solar-system-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 1; /* Ensure it stays below the sidebar and controls */
+}
+
+/* Modal Styling (if applicable) */
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.modal h2 {
+    font-size: 1.8rem;
+    color: #ffcc00;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.modal button {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 1rem;
+    cursor: pointer;
     transition: all 0.3s ease;
 }
 
-button:hover {
-    background: #e64a19;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+.modal button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
 }
-
-button:active {
-    transform: scale(0.95);
-}
-
-/* Responsiveness */
-@media (max-width: 768px) {
-    header {
-        width: 90%;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    button {
-        bottom: 15px;
-        right: 15px;
-        font-size: 1em;
-        padding: 8px 15px;
-    }
-}
-
-

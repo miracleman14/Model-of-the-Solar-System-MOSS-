@@ -5,6 +5,8 @@
   "dependencies": {
     "@react-three/drei": "^9.117.3",
     "@react-three/fiber": "^8.17.10",
+    "gsap": "^3.12.7",
+    "react-icons": "^5.4.0",
     "three": "^0.171.0",
     "three-orbitcontrols": "^2.110.2"
   }

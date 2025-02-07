@@ -31,6 +31,7 @@ planets_skyfield = {
     "saturn": eph['saturn barycenter'],
     "uranus": eph['uranus barycenter'],
     "neptune": eph['neptune barycenter'],
+    "pluto": eph['pluto barycenter'],
 }
 
 
@@ -227,7 +228,7 @@ def start_simulation():
 
             # Send updated data to the frontend
             planet_data = [
-                planet for planet in planets if planet['name'] in ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune']
+                planet for planet in planets if planet['name'] in ['Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto']
             ]
             socketio.emit('planet_data', {'planets': planet_data, 'date': virtual_date.isoformat()})
 

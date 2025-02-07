@@ -13,6 +13,7 @@ planetary_masses = {
     "saturn": 5.6834e26,
     "uranus": 8.6810e25,
     "neptune": 1.02413e26,
+    "pluto": 1.303e22,
 }
 
 # Predefined orbital parameters for Mercury and Venus
@@ -56,5 +57,10 @@ orbital_params = {
         "semi_major_axis": 30.178,  # AU
         "eccentricity": 0.010,
         "orbital_period": 59800,  # days
+    },
+    "pluto": {
+        "semi_major_axis": 39.482,  # AU
+        "eccentricity": 0.2488,
+        "orbital_period": 90560,  # days
     },
 }
