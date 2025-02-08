@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Home.css';
 import { FaPlay, FaFacebook, FaTwitter, FaInstagram } from 'react-icons/fa';
-import bgVideo from './bgvid.mp4'; // Ensure this file exists in the same directory
+import bgVideo from './bgvid.mp4';
 
 const HomePage = () => {
     const navigate = useNavigate();
@@ -22,13 +22,17 @@ const HomePage = () => {
             </div>
 
             {/* Navigation Bar */}
-            <nav className="navbar">
-                <div className="logo">MOSS</div>
-                <ul className="nav-links">
-                    <li><a href="/">Home</a></li>
-                    <li><a href="/about">About Us</a></li>
-                    <li><a href="/contact">Contact Us</a></li>
-                </ul>
+            <nav className="homepage-navbar">
+                <div className="navbar-content">
+                    <div className="logo">
+                        <a href="/">MOSS</a>
+                    </div>
+                    <ul className="nav-links">
+                        <li><a href="/">Home</a></li>
+                        <li><a href="/about">About Us</a></li>
+                        <li><a href="/contact">Contact Us</a></li>
+                    </ul>
+                </div>
             </nav>
 
             {/* Hero Section */}

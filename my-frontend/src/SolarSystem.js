@@ -26,6 +26,59 @@ const SolarSystem = () => {
     const raycasterRef = useRef(new THREE.Raycaster());  // Raycaster to detect clicks
     const mouseRef = useRef(new THREE.Vector2());  // Store mouse position
     const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar state
+    const starFieldRef = useRef(null); // Reference to store the starfield
+
+
+    const createStarfield = (scene) => {
+        if (starFieldRef.current) return; // If the starfield already exists, do nothing
+
+        const starCount = 5000; // Number of stars
+        const positions = new Float32Array(starCount * 3); // Each star has x, y, z coordinates
+        const colors = new Float32Array(starCount * 3); // Each star has r, g, b color values
+
+        // Randomly distribute stars in a cube and assign random colors
+        for (let i = 0; i < starCount; i++) {
+            // Random positions
+            positions[i * 3] = (Math.random() - 0.5) * 20000; // x
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 20000; // y
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 20000; // z
+
+            // Random colors
+            const r = Math.random() * 0.5 + 0.5; // Bias toward brighter colors
+            const g = Math.random() * 0.5 + 0.5;
+            const b = Math.random() * 0.5 + 0.5;
+            colors[i * 3] = r;
+            colors[i * 3 + 1] = g;
+            colors[i * 3 + 2] = b;
+
+
+        }
+
+        // Create a geometry and set the positions
+        const starGeometry = new THREE.BufferGeometry();
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3)); // Add color attribute
+
+        const sizes = new Float32Array(starCount);
+        for (let i = 0; i < starCount; i++) {
+            sizes[i] = Math.random() * 0.2 + 0.1; // Random size between 0.1 and 0.3
+        }
+        starGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        // Create a material for the stars with vertex colors enabled
+        const starMaterial = new THREE.PointsMaterial({
+            size: 0.1, // Size of each star
+            transparent: true,
+            vertexColors: true, // Enable vertex colors
+        });
+
+        // Create the starfield mesh
+        const starField = new THREE.Points(starGeometry, starMaterial);
+        scene.add(starField);
+
+        // Store the starfield in the reference
+        starFieldRef.current = starField;
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -78,9 +131,16 @@ const SolarSystem = () => {
         if (!isSceneInitializedRef.current) {
             const scene = new THREE.Scene();
             sceneRef.current = scene;
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100000);
+
+            const camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                100000
+            );
             camera.position.z = 1000; // Set the camera further away from the Sun
             cameraRef.current = camera;
+
             const renderer = new THREE.WebGLRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
             const container = document.getElementById('solar-system-container');
@@ -99,8 +159,18 @@ const SolarSystem = () => {
             controls.maxDistance = 50000;
             controlsRef.current = controls;
 
+            // Add the starfield background
+            createStarfield(scene);
+
             const animate = () => {
                 requestAnimationFrame(animate);
+
+                // Rotate the starfield for a parallax effect
+                if (starFieldRef.current) {
+                    starFieldRef.current.rotation.x += 0.0001;
+                    starFieldRef.current.rotation.y += 0.0001;
+                }
+
                 controls.update();
                 renderer.render(scene, camera);
                 timeRef.current += speed;
@@ -228,7 +298,8 @@ const SolarSystem = () => {
     useEffect(() => {
         if (planetData.length > 0 && fontRef.current) {
             const scene = sceneRef.current;
-            scene.clear();
+            // Remove all objects except the starfield
+            scene.children = scene.children.filter((child) => child === starFieldRef.current);
 
             const sunGeometry = new THREE.SphereGeometry(109 / 5, 64, 64); // Adjust Sun size for better prominence
             const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
@@ -444,10 +515,12 @@ const SolarSystem = () => {
         );
     };
 
+
+
     return (
         <div className="app-container">
             {/* Title */}
-            <h1>Solar System Simulation</h1>
+            <h1>MOSS</h1>
 
             {/* Controls Container (Moved to the Right) */}
             <div className="controls-container">
