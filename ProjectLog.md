@@ -42,15 +42,17 @@ This document logs the progress of the Model of the Solar System project, detail
 ---
 
 ## Ongoing Tasks 24/02/25
-- Working on improving clickable Functionality
-- Ensuring there is a home page to start simulation
+- Fix issues with date/time resetting and ensure the time interval is clear e.g. 1 day/sec
+- Adding harder bodies such as comets and the moon
 
 ---
 
 ## Planned Tasks 03/03/25
-- Adding harder bodies such as pluto, comets and the moon
 - Implement time-based progression control for user-defined dates.
 - Allow user to go back in time
+- Add moons for other planets
+- Potential feature for adding new planets in to simulate
+- Add about/ contact page
 
 ---
 
@@ -59,4 +61,4 @@ This log will be updated as the project progresses, with each milestone and comp
 
 ---
 
-_Last updated: [01/02/2025]_
+_Last updated: [18/02/2025]_
