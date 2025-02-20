@@ -44,6 +44,8 @@ This document logs the progress of the Model of the Solar System project, detail
 ## Ongoing Tasks 24/02/25
 - Fix issues with date/time resetting and ensure the time interval is clear e.g. 1 day/sec
 - Adding harder bodies such as comets and the moon
+- Ensure orbit lines have 3D depth
+- Organise project much clearer
 
 ---
 
