@@ -39,22 +39,35 @@ This document logs the progress of the Model of the Solar System project, detail
   - **Camera panning on clicked planet**: When planet is clicked the camera will focus on that planet.
   - **Homepage**: Very basic homepage added with start simulation button that works.
 
+### Introduced Halley's comets and moons 20/02/25
+- Added Halley's Comet;
+  - **Fetching its starting position** from Horizon data, and ensuring calculations are accurate
+- Added Moons;
+  - Added Moons for **Earth and Jupiter's** four largest moons, and ensured they rotate around their parent planets.
+
+### Added more styling for system 26/02/25
+- Added Textures for all bodies
+  - **Added textures** for Sun, Planets, Moons and Halley's Comet
+- Stying to orbits
+  - **Orbit Lines**: Incorporated orbit lines for all planets
 ---
 
-## Ongoing Tasks 24/02/25
-- Fix issues with date/time resetting and ensure the time interval is clear e.g. 1 day/sec
-- Adding harder bodies such as comets and the moon
-- Ensure orbit lines have 3D depth
-- Organise project much clearer
+## Ongoing Tasks 05/03/25
+- Ensure orbit lines have 3D depth and improve them to avoid chopping or overlapping
+- Fixing issues with other bodies being added to scene
+
 
 ---
 
-## Planned Tasks 03/03/25
+## Planned Tasks 30/03/25
 - Implement time-based progression control for user-defined dates.
 - Allow user to go back in time
-- Add moons for other planets
-- Potential feature for adding new planets in to simulate
+- Allow users to add planets in to simulate (take as input the positions, mass, and size of each planet and, after solving the net gravitational force acting on each planet, and solving for the trajectory)
 - Add about/ contact page
+- Style pages and have a consistent style for simulation
+- Add calming backing music
+- Introduce hovering over planet showing some details about planet
+- Improving modal features
 
 ---
 
@@ -63,4 +76,4 @@ This log will be updated as the project progresses, with each milestone and comp
 
 ---
 
-_Last updated: [18/02/2025]_
+_Last updated: [27/02/2025]_
