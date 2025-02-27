@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Home.css';
+import '../styles/Home.css';
 import { FaPlay, FaFacebook, FaTwitter, FaInstagram } from 'react-icons/fa';
-import bgVideo from './bgvid.mp4';
+import bgVideo from '../bgvid.mp4';
 
 const HomePage = () => {
     const navigate = useNavigate();
@@ -25,10 +25,10 @@ const HomePage = () => {
             <nav className="homepage-navbar">
                 <div className="navbar-content">
                     <div className="logo">
-                        <a href="/">MOSS</a>
+                        <a href="/my-frontend/public">MOSS</a>
                     </div>
                     <ul className="nav-links">
-                        <li><a href="/">Home</a></li>
+                        <li><a href="/my-frontend/public">Home</a></li>
                         <li><a href="/about">About Us</a></li>
                         <li><a href="/contact">Contact Us</a></li>
                     </ul>
@@ -62,7 +62,7 @@ const HomePage = () => {
 
             {/* Footer */}
             <footer className="footer">
-                <p>© 2025 SolarSim. All rights reserved.</p>
+                <p>© 2025 MOSS. All rights reserved.</p>
                 <div className="social-icons">
                     <FaFacebook size={20} />
                     <FaTwitter size={20} />

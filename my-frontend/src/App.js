@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './HomePage';
-import SolarSystem from './SolarSystem';
+import HomePage from './components/HomePage';
+import SolarSystem from './components/SolarSystem';
 
 function App() {
     return (

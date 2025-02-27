@@ -1,5 +1,5 @@
 import React from 'react';
-import './PlanetModal.css'; // Add styles for the modal
+import '../styles/PlanetModal.css'; // Add styles for the modal
 
 const PlanetModal = ({ planet, onClose }) => {
     if (!planet) return null;
