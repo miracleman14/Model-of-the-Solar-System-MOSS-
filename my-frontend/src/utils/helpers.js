@@ -111,7 +111,7 @@ export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) 
     } else if (isMoon) {
         radius = sizes[body.name];
     } else if (isComet) {
-        radius = Math.max(sizes[body.name] * 20, 0.2); // Scale up for visibility
+        radius = Math.max(sizes[body.name] * 20, 0.2);
     } else {
         radius = sizes[body.name];
     }
@@ -123,12 +123,14 @@ export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) 
     );
 
     const material = createPlanetMaterial(TEXTURES[body.name], isSun, isComet);
+    if (body.color) {
+        material.color = new THREE.Color(body.color);
+    }
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = body.name;
     mesh.userData.scaledRadius = radius;
     mesh.userData.isComet = isComet;
 
-    // Enable shadows for planets and moons
     if (!isSun && !isComet) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;

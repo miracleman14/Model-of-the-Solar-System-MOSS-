@@ -14,6 +14,8 @@ import { moon_data } from '../utils/constants'; // Make sure this is imported!
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import PlanetCreationForm from './PlanetCreationForm';
+
 
 
 const SolarSystem = () => {
@@ -45,6 +47,24 @@ const SolarSystem = () => {
     // Reference for last comet position to calculate velocity
     const lastCometPositionRef = useRef(null);
 
+    // Add a ref to store initial planet positions
+    const initialPlanetPositionsRef = useRef({});
+
+
+    // Function to calculate the distance between two 3D points
+    const calculateDistance = (pos1, pos2) => {
+        return Math.sqrt(
+            Math.pow(pos1.x - pos2.x, 2) +
+            Math.pow(pos1.y - pos2.y, 2) +
+            Math.pow(pos1.z - pos2.z, 2)
+        );
+    };
+
+    const handleCreatePlanet = (newPlanet) => {
+        // Emit the new planet data to the backend
+        emitEvent('create_planet', newPlanet);
+    };
+
     useEffect(() => {
         if (!isSceneInitializedRef.current) {
             const scene = new THREE.Scene();
@@ -55,8 +75,8 @@ const SolarSystem = () => {
             const camera = new THREE.PerspectiveCamera(
                 45,
                 window.innerWidth / window.innerHeight,
-                1,  // Near clipping plane
-                1e12 // Far clipping plane
+                1,
+                1e12
             );
             camera.position.z = 2500;
             cameraRef.current = camera;
@@ -68,7 +88,6 @@ const SolarSystem = () => {
             renderer.toneMappingExposure = 1;
             renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-            // Enable shadow mapping
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -76,24 +95,20 @@ const SolarSystem = () => {
             if (container) container.appendChild(renderer.domElement);
             rendererRef.current = renderer;
 
-            // --- Post-Processing Setup ---
             const composer = new EffectComposer(renderer);
             composer.addPass(new RenderPass(scene, camera));
 
-            // Bloom pass for the sun's glow
             const bloomPass = new UnrealBloomPass(
                 new THREE.Vector2(window.innerWidth, window.innerHeight),
-                1.5, // Strength
-                10, // Radius
-                0.85 // Threshold
+                1.5,
+                10,
+                0.85
             );
             composer.addPass(bloomPass);
 
-            // --- Light Setup ---
             const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
             scene.add(ambientLight);
 
-            // Point Light (Sun)
             const sunLight = new THREE.PointLight(0xffffff, 5, 0, 2);
             sunLight.position.set(0, 0, 0);
             sunLight.castShadow = true;
@@ -114,13 +129,12 @@ const SolarSystem = () => {
                 requestAnimationFrame(animate);
                 controls.update();
 
-                // Update comet trail orientation based on velocity
                 const cometMesh = scene.getObjectByName("Halley");
                 if (cometMesh && cometVelocityRef.current) {
                     updateCometTrail(cometMesh, cometVelocityRef.current);
                 }
 
-                composer.render(); // Use the composer instead of the renderer
+                composer.render();
                 timeRef.current += speed;
             };
             animate();
@@ -135,9 +149,22 @@ const SolarSystem = () => {
         }
     }, [speed]);
 
+
+
     useEffect(() => {
         if (planetData.length > 0 && sceneRef.current) {
             const scene = sceneRef.current;
+
+            // Store initial positions when planetData first loads
+            if (Object.keys(initialPlanetPositionsRef.current).length === 0) {
+                planetData.forEach(body => {
+                    initialPlanetPositionsRef.current[body.name] = {
+                        x: body.x,
+                        y: body.y,
+                        z: body.z
+                    };
+                });
+            }
 
             // Check if Sun exists, if not create. If exists, skip
             let sunMesh = scene.getObjectByName("Sun");
@@ -249,6 +276,63 @@ const SolarSystem = () => {
                 const bodyName = body.name;
                 const position = new THREE.Vector3(body.x, body.y, body.z);
 
+                // Remove object that are not present.
+                for (let i = scene.children.length - 1; i >= 0; i--) {
+                    const object = scene.children[i];
+
+                    // Skip non-meshes and the Sun
+                    if (object.type !== 'Mesh' || object.name === "Sun") {
+                        continue;
+                    }
+
+                    // Check for removal of missing bodies (as before)
+                    if (!planetData.some(body => body.name === object.name)) {
+                        if (object.geometry) object.geometry.dispose();
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(material => material.dispose());
+                            } else {
+                                object.material.dispose();
+                            }
+                        }
+                        scene.remove(object);
+                        continue; // Important: Skip to the next object
+                    }
+
+                    // Duplicate detection and removal
+                    if (object.name === bodyName && object !== bodyMesh) {
+                        // We have a potential duplicate.  Compare distances to initial position.
+                        const currentObjectPosition = { x: object.position.x * positionScale, y: object.position.y * positionScale, z: object.position.z * positionScale };
+                        const currentBodyPosition = {x: body.x, y: body.y, z: body.z};
+
+
+                        const initialPosition = initialPlanetPositionsRef.current[bodyName];
+                        if (!initialPosition) {
+                            console.warn(`Initial position not found for ${bodyName}`);
+                            continue
+                        }
+
+                        const distObject = calculateDistance(currentObjectPosition, initialPosition);
+                        const distBody = calculateDistance(currentBodyPosition, initialPosition);
+
+
+                        // If the existing object in the scene is *further* from the initial
+                        // position than the current `body` data, then the existing object
+                        // is the duplicate and should be removed.
+                        if (distObject > distBody) {
+                            if (object.geometry) object.geometry.dispose();
+                            if (object.material) {
+                                if (Array.isArray(object.material)) {
+                                    object.material.forEach(material => material.dispose());
+                                } else {
+                                    object.material.dispose();
+                                }
+                            }
+                            scene.remove(object);
+                        }
+                    }
+                }
+
                 setOrbitPaths((prevOrbitPaths) => {
                     const newOrbitPaths = { ...prevOrbitPaths };
 
@@ -327,12 +411,10 @@ const SolarSystem = () => {
                         }, 0);
 
                         // Check if the orbit is complete
-                        if (newTotalAngle > 2 * Math.PI && distToStart < avgRadius * 0.15) {
+                        if (newTotalAngle > 2 * Math.PI && distToStart < avgRadius * 0.00005) {
+                            // Use 5% of radius instead of 15%
                             console.log(`${bodyName} completed orbit! Angle: ${newTotalAngle}, distToStart: ${distToStart}, avgRadius: ${avgRadius}`);
-
-                            // Mark orbit as complete
                             setCompletedOrbits(prev => ({...prev, [bodyName]: true}));
-
                             // Simplify the path to a reasonable number of points for the final orbit
                             const idealPointCount = bodyName.includes('Moon') ? 100 : 200;
                             if (updatedPath.length > idealPointCount) {
@@ -451,12 +533,9 @@ const SolarSystem = () => {
 
     return (
         <>
-            {/* Title */}
             <div>MOSS</div>
-
-            {/* Controls Container */}
             <div>
-                Date: {date} ({timeInterval}) {/* Display the time interval */}
+                Date: {date} ({timeInterval})
                 <br />
                 Speed:
                 <input
@@ -469,37 +548,28 @@ const SolarSystem = () => {
                 <button onClick={handleSimulationToggle}>
                     {isPaused ? 'Resume Simulation' : 'Pause Simulation'}
                 </button>
-                {/* Button to toggle orbit lines */}
                 <button onClick={toggleOrbitLines}>
                     {showOrbitLines ? 'Hide Orbit Lines' : 'Show Orbit Lines'}
                 </button>
             </div>
-
-            {/* Sidebar Toggle Button */}
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                 {isSidebarOpen ? 'Close' : 'Planets'}
             </button>
-
-            {/* Render the Sidebar */}
             {renderSidebar()}
-
-            {/* Solar System Container */}
             <div id="solar-system-container"></div>
-
-            {/* Render the modal if a planet is selected */}
             {selectedPlanet && <PlanetModal planet={selectedPlanet} onClose={() => setSelectedPlanet(null)} />}
-
-            {/* Render Labels */}
             <Labels scene={sceneRef.current} planetData={planetData} font={fontRef.current} />
-
-            {/* Render Starfield */}
             <Starfield scene={sceneRef.current} />
-
-            {/*  Orbit lines */}
             {showOrbitLines && Object.entries(orbitPaths).map(([bodyName, path]) => {
-                // For Halley's comet, use a different color for its orbit trail
+                if (moon_data[bodyName]) {
+                    return null;
+                }
                 const color = bodyName === "Halley" ? 0x88aaff : 0xffffff;
                 const opacity = bodyName === "Halley" ? 0.7 : 0.5;
+
+                // Find the planet data to get the trailColor
+                const planet = planetData.find(p => p.name === bodyName);
+                const trailColor = planet?.trailColor;
 
                 return (
                     <Orbit
@@ -512,9 +582,11 @@ const SolarSystem = () => {
                         moonDistanceScale={moonDistanceScale}
                         bodyName={bodyName}
                         completedOrbits={completedOrbits}
+                        trailColor={trailColor} // Pass the trailColor prop
                     />
                 );
             })}
+            <PlanetCreationForm onCreatePlanet={handleCreatePlanet} />
         </>
     );
 };

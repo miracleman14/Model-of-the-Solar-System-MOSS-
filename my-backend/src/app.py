@@ -3,6 +3,8 @@ import re
 import math
 import copy
 from datetime import datetime, timedelta
+from urllib import request
+
 import requests
 from flask import Flask, jsonify
 from flask_socketio import SocketIO, emit
@@ -356,7 +358,9 @@ def adjust_speed(data):
         (30, 3),             # 1 month/second
         (90, 4),             # 3 months/second
         (182.625, 5),         # 0.5 years/second (fastest)
-        (365.5, 6)         # 0.5 years/second (fastest)
+        (365.5, 6),         # 1 years/second (fastest)
+        (731, 7),         # 1 years/second (fastest)
+        (1462, 8)         # 1 years/second (fastest)
     ]
 
     # Find the appropriate time scale based on speed_factor
@@ -560,6 +564,49 @@ def get_orbit_paths():
             halley_points.append([x, y])
         orbit_paths['halley'] = halley_points
     return jsonify(orbit_paths)
+
+@app.route('/create_planet', methods=['POST'])
+def create_planet():
+    data = request.json
+    new_planet = {
+        "name": data['name'],
+        "mass": data['mass'],
+        "radius": data['size'],
+        "x": data['distanceFromSun'] * 1.496e11,  # Convert AU to meters
+        "y": 0,
+        "z": 0,
+        "vx": 0,
+        "vy": math.sqrt(G * M_sun / (data['distanceFromSun'] * 1.496e11)),  # Orbital velocity
+        "vz": 0,
+        "ax": 0,
+        "ay": 0,
+        "az": 0,
+        "color": data['planetColor'],
+        "trailColor": data['trailColor']
+    }
+    planets.append(new_planet)
+    return jsonify({"message": "Planet created", "planet": new_planet})
+
+@socketio.on('create_planet')
+def handle_create_planet(data):
+    new_planet = {
+        "name": data['name'],
+        "mass": data['mass'],
+        "radius": data['size'],
+        "x": data['distanceFromSun'] * 1.496e11,  # Convert AU to meters
+        "y": 0,
+        "z": 0,
+        "vx": 0,
+        "vy": math.sqrt(G * M_sun / (data['distanceFromSun'] * 1.496e11)),  # Orbital velocity
+        "vz": 0,
+        "ax": 0,
+        "ay": 0,
+        "az": 0,
+        "color": data['planetColor'],
+        "trailColor": data['trailColor']  # Include trailColor in the response
+    }
+    planets.append(new_planet)
+    emit('planet_created', new_planet, broadcast=True)
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)

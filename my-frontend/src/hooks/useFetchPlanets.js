@@ -53,7 +53,7 @@ const useFetchPlanets = () => {
                     }
                 }
 
-                console.log("Updated planet data:", uniqueData);
+                //console.log("Updated planet data:", uniqueData);
                 setPlanetData(uniqueData);
 
                 // Debug: Log moon positions (optional, for checking)
