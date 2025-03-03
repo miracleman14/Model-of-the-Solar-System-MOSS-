@@ -5,13 +5,14 @@ const useFetchPlanets = () => {
     const [planetData, setPlanetData] = useState([]);
     const [date, setDate] = useState('');
     const [isPaused, setIsPaused] = useState(false);
+    const [planets, setPlanets] = useState([]); // Add this line
     const socketRef = useRef(null);
 
     const fetchData = useCallback(async () => {
         try {
             const response = await fetch('http://localhost:5000/reset');
             const initialData = await response.json();
-            console.log("Initial planet data:", initialData.planets); // Log initial data
+            console.log("Initial planet data:", initialData.planets);
 
             // Filter and deduplicate initial data
             const filteredInitialData = initialData.planets.filter(body => body.name !== "Moon Moon");
@@ -23,12 +24,13 @@ const useFetchPlanets = () => {
                     initialNames.add(body.name);
                 }
             }
-            setPlanetData(uniqueInitialData); // Set planet data to the filtered and deduplicated initial state
+            setPlanetData(uniqueInitialData);
+            setPlanets(uniqueInitialData); // Initialize planets state
 
             const socket = io('http://localhost:5000');
             socketRef.current = socket;
 
-            socket.emit('start_simulation'); // Start the simulation after reset
+            socket.emit('start_simulation');
 
             socket.on('planet_data', (data) => {
                 const truncatedDateString = data.date.substring(0, 23);
@@ -53,47 +55,56 @@ const useFetchPlanets = () => {
                     }
                 }
 
-                //console.log("Updated planet data:", uniqueData);
                 setPlanetData(uniqueData);
-
-                // Debug: Log moon positions (optional, for checking)
-                uniqueData.forEach(body => {
-                    if(body.name.includes("Moon"))
-                        console.log(`Moon ${body.name} position: (${body.x}, ${body.y}, ${body.z})`);
-                });
+                setPlanets(uniqueData); // Update planets state
             });
-
 
         } catch (error) {
             console.error('Error fetching planet data:', error);
         }
-    }, []); // Empty dependency array for useCallback - fetchData doesn't depend on anything outside
+    }, []);
 
     useEffect(() => {
         fetchData();
 
-        // Cleanup function
         return () => {
             if (socketRef.current) {
-                socketRef.current.disconnect(); // Clean up socket connection on unmount
+                socketRef.current.disconnect();
             }
         };
-    }, [fetchData]); // fetchData is now a dependency
+    }, [fetchData]);
 
-    const handleSimulationToggle = useCallback(() => { // Use useCallback here too
+    const handleSimulationToggle = useCallback(() => {
         const socket = socketRef.current;
-        if (socket) { // Check if socket exists
+        if (socket) {
             if (isPaused) {
-                socket.emit('start_simulation'); // Resume simulation
+                socket.emit('start_simulation');
             } else {
-                socket.emit('stop_simulation'); // Pause simulation
+                socket.emit('stop_simulation');
             }
         }
-        setIsPaused(prevIsPaused => !prevIsPaused); // Toggle pause state - more robust way
-    }, [isPaused]); // isPaused is a dependency of handleSimulationToggle
+        setIsPaused(prevIsPaused => !prevIsPaused);
+    }, [isPaused]);
 
+    const handleCreatePlanet = (newPlanet) => {
+        fetch('http://localhost:5000/create_planet', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newPlanet),
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Planet created:', data);
+                setPlanets(prevPlanets => [...prevPlanets, data.planet]); // Update planets state
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    };
 
-    return { planetData, date, isPaused, handleSimulationToggle };
+    return { planetData, date, isPaused, handleSimulationToggle, planets, handleCreatePlanet }; // Return planets and handleCreatePlanet
 };
 
 export default useFetchPlanets;

@@ -382,9 +382,17 @@ simulation_running = False
 virtual_date = None  # Initialize virtual_date
 dt = 1  # Initial dt value
 
+# Initialize planets globally
+planets = fetch_real_positions_for_today()
+
+# Simulation state
+simulation_running = False
+virtual_date = None
+dt = 1  # Initial time step
+
 @socketio.on('start_simulation')
 def start_simulation():
-    global simulation_running, virtual_date, dt, planets
+    global simulation_running, virtual_date, dt, planets  # Ensure planets is in the global scope
     if simulation_running:
         emit('error', {'message': 'Simulation is already running'})
         return
@@ -567,6 +575,7 @@ def get_orbit_paths():
 
 @app.route('/create_planet', methods=['POST'])
 def create_planet():
+    global planets  # Ensure planets is updated globally
     data = request.json
     new_planet = {
         "name": data['name'],
@@ -585,7 +594,15 @@ def create_planet():
         "trailColor": data['trailColor']
     }
     planets.append(new_planet)
+    # Reset simulation
+    global simulation_running
+    simulation_running = False
+    planets = fetch_real_positions_for_today()  # Reinitialize planets
+    simulation_running = True
     return jsonify({"message": "Planet created", "planet": new_planet})
+
+
+
 
 @socketio.on('create_planet')
 def handle_create_planet(data):
@@ -607,6 +624,9 @@ def handle_create_planet(data):
     }
     planets.append(new_planet)
     emit('planet_created', new_planet, broadcast=True)
+
+
+
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)

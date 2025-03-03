@@ -52,9 +52,17 @@ This document logs the progress of the Model of the Solar System project, detail
   - **Orbit Lines**: Incorporated orbit lines for all planets
 ---
 
-## Ongoing Tasks 05/03/25
-- Ensure orbit lines have 3D depth and improve them to avoid chopping or overlapping
-- Fixing issues with other bodies being added to scene
+### Added Creating Planet Feature
+- Allow users to add planets in to simulate 
+  - **User inputs constants** User can choose constants from dropdown and view planet in scene
+- Users can customise their planet during creation
+  - **Colour and trail colour** Users can choose the colour of the trail and the planet
+
+## Ongoing Tasks 20/03/25
+- Improving Planet Creation
+- Style pages and have a consistent style for simulation
+- Add calming backing music
+- Improving modal features
 
 
 ---
@@ -62,12 +70,7 @@ This document logs the progress of the Model of the Solar System project, detail
 ## Planned Tasks 30/03/25
 - Implement time-based progression control for user-defined dates.
 - Allow user to go back in time
-- Allow users to add planets in to simulate (take as input the positions, mass, and size of each planet and, after solving the net gravitational force acting on each planet, and solving for the trajectory)
-- Add about/ contact page
-- Style pages and have a consistent style for simulation
-- Add calming backing music
 - Introduce hovering over planet showing some details about planet
-- Improving modal features
 
 ---
 
@@ -76,4 +79,4 @@ This log will be updated as the project progresses, with each milestone and comp
 
 ---
 
-_Last updated: [27/02/2025]_
+_Last updated: [03/05/2025]_

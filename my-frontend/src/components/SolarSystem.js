@@ -46,7 +46,7 @@ const SolarSystem = () => {
     const cometVelocityRef = useRef(new THREE.Vector3());
     // Reference for last comet position to calculate velocity
     const lastCometPositionRef = useRef(null);
-
+    const [createdPlanets, setCreatedPlanets] = useState([]);
     // Add a ref to store initial planet positions
     const initialPlanetPositionsRef = useRef({});
 
@@ -61,9 +61,44 @@ const SolarSystem = () => {
     };
 
     const handleCreatePlanet = (newPlanet) => {
-        // Emit the new planet data to the backend
-        emitEvent('create_planet', newPlanet);
+        // Add proper radius scaling
+        const scaledPlanet = {
+            ...newPlanet,
+            radius: newPlanet.size * 6371000, // Scale size to match other planets
+            // Use distanceFromSun to calculate actual position
+            x: newPlanet.distanceFromSun * 1.496e+11, // 1 AU in meters
+            y: 0,
+            z: 0
+        };
+
+        console.log("Creating new planet:", scaledPlanet);
+        emitEvent('create_planet', scaledPlanet);
+        setCreatedPlanets(prevPlanets => [...prevPlanets, newPlanet.name]);
     };
+
+    useEffect(() => {
+        if (planetData.length > 0 && sceneRef.current) {
+            const scene = sceneRef.current;
+            console.log("Planet data loaded:", planetData);
+
+            planetData.forEach((body) => {
+                if (body.name === "Sun") return;
+
+                let bodyMesh = scene.getObjectByName(body.name);
+                console.log(`Processing planet: ${body.name}`, body);
+
+                if (!bodyMesh) {
+                    console.log(`Creating mesh for planet: ${body.name}`);
+                    bodyMesh = createCelestialBodyMesh(body, positionScale, moonDistanceScale);
+                    bodyMesh.name = body.name;
+                    scene.add(bodyMesh);
+                    console.log(`Mesh created and added to scene: ${body.name}`, bodyMesh);
+                } else {
+                    console.log(`Mesh already exists for planet: ${body.name}`, bodyMesh);
+                }
+            });
+        }
+    }, [planetData, positionScale, moonDistanceScale]);
 
     useEffect(() => {
         if (!isSceneInitializedRef.current) {
@@ -447,18 +482,25 @@ const SolarSystem = () => {
 
     const centreCameraOnPlanet = (planetName) => {
         const planetMesh = sceneRef.current.getObjectByName(planetName);
-        if (!planetMesh) return;
+        if (!planetMesh) {
+            console.warn(`Planet ${planetName} not found in scene`);
+            return;
+        }
 
         const targetPosition = planetMesh.position.clone();
         const camera = cameraRef.current;
 
         // Calculate the camera distance based on the planet's size
         const planetSize = planetMesh.geometry.boundingSphere.radius;
-        const cameraDistance = planetSize * 10; // Adjust the multiplier as needed
+        // Set a minimum camera distance to prevent being too close
+        const cameraDistance = Math.max(planetSize * 10, 50);
+
+        console.log(`Centering on ${planetName}, position: ${JSON.stringify(targetPosition)}, size: ${planetSize}`);
 
         // Add an offset to the camera position for better framing
         const cameraOffset = new THREE.Vector3(0, 0, cameraDistance);
         const finalPosition = targetPosition.clone().add(cameraOffset);
+
 
         // Smoothly animate the camera to the planet position
         const duration = 1.5; // Animation duration in seconds
@@ -502,9 +544,8 @@ const SolarSystem = () => {
     };
 
     const renderSidebar = () => {
-        if (!isSidebarOpen) return null; // Only render if sidebar is open
-        // Include Halley in the list of selectable bodies
-        const planets = ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Moon", "Io", "Europa", "Ganymede", "Callisto", "Halley"];
+        if (!isSidebarOpen) return null;
+        const planets = ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Moon", "Io", "Europa", "Ganymede", "Callisto", "Halley", ...createdPlanets];
         return (
             <div>
                 Planets
@@ -513,7 +554,7 @@ const SolarSystem = () => {
                         key={planet}
                         onClick={() => {
                             handlePlanetClick(planet);
-                            setIsSidebarOpen(false); // Close sidebar on selection
+                            setIsSidebarOpen(false);
                         }}
                         style={{
                             fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
@@ -533,60 +574,99 @@ const SolarSystem = () => {
 
     return (
         <>
-            <div>MOSS</div>
-            <div>
-                Date: {date} ({timeInterval})
-                <br />
-                Speed:
-                <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={speed}
-                    onChange={handleSpeedChange}
-                />
-                <button onClick={handleSimulationToggle}>
-                    {isPaused ? 'Resume Simulation' : 'Pause Simulation'}
-                </button>
-                <button onClick={toggleOrbitLines}>
-                    {showOrbitLines ? 'Hide Orbit Lines' : 'Show Orbit Lines'}
-                </button>
-            </div>
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                {isSidebarOpen ? 'Close' : 'Planets'}
-            </button>
-            {renderSidebar()}
+            {/* Main container for the 3D scene */}
             <div id="solar-system-container"></div>
-            {selectedPlanet && <PlanetModal planet={selectedPlanet} onClose={() => setSelectedPlanet(null)} />}
+
+            {/* Controls container */}
+            <div className="controls-container">
+                <div>
+                    Date: {date} ({timeInterval})
+                    <br />
+                    Speed:
+                    <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={speed}
+                        onChange={handleSpeedChange}
+                    />
+                    <button onClick={handleSimulationToggle}>
+                        {isPaused ? 'Resume Simulation' : 'Pause Simulation'}
+                    </button>
+                    <button onClick={toggleOrbitLines}>
+                        {showOrbitLines ? 'Hide Orbit Lines' : 'Show Orbit Lines'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <h3>Planets</h3>
+                {["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Moon", "Io", "Europa", "Ganymede", "Callisto", "Halley", ...createdPlanets].map((planet) => (
+                    <div
+                        key={planet}
+                        onClick={() => {
+                            handlePlanetClick(planet);
+                            setIsSidebarOpen(false);
+                        }}
+                        style={{
+                            fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        {planet}
+                    </div>
+                ))}
+            </div>
+
+            {/* Planet Creation Form */}
+            <div className="planet-creation-form">
+                <PlanetCreationForm onCreatePlanet={handleCreatePlanet} />
+            </div>
+
+            {/* Planet Modal */}
+            {selectedPlanet && (
+                <div className="planet-modal">
+                    <h2>{selectedPlanet.name}</h2>
+                    <p>Mass: {selectedPlanet.mass}</p>
+                    <p>Radius: {selectedPlanet.radius}</p>
+                    <p>Distance from Sun: {selectedPlanet.distanceFromSun}</p>
+                    <button onClick={() => setSelectedPlanet(null)}>Close</button>
+                </div>
+            )}
+
+            {/* Labels and Starfield */}
             <Labels scene={sceneRef.current} planetData={planetData} font={fontRef.current} />
             <Starfield scene={sceneRef.current} />
-            {showOrbitLines && Object.entries(orbitPaths).map(([bodyName, path]) => {
-                if (moon_data[bodyName]) {
-                    return null;
-                }
-                const color = bodyName === "Halley" ? 0x88aaff : 0xffffff;
-                const opacity = bodyName === "Halley" ? 0.7 : 0.5;
 
-                // Find the planet data to get the trailColor
-                const planet = planetData.find(p => p.name === bodyName);
-                const trailColor = planet?.trailColor;
+            {/* Orbit Lines */}
+            {showOrbitLines &&
+                Object.entries(orbitPaths).map(([bodyName, path]) => {
+                    if (moon_data[bodyName]) {
+                        return null;
+                    }
+                    const color = bodyName === "Halley" ? 0x88aaff : 0xffffff;
+                    const opacity = bodyName === "Halley" ? 0.7 : 0.5;
 
-                return (
-                    <Orbit
-                        key={bodyName}
-                        orbitPath={path}
-                        color={color}
-                        opacity={opacity}
-                        scene={sceneRef.current}
-                        positionScale={bodyName === "Halley" ? cometDistanceScale : positionScale}
-                        moonDistanceScale={moonDistanceScale}
-                        bodyName={bodyName}
-                        completedOrbits={completedOrbits}
-                        trailColor={trailColor} // Pass the trailColor prop
-                    />
-                );
-            })}
-            <PlanetCreationForm onCreatePlanet={handleCreatePlanet} />
+                    // Find the planet data to get the trailColor
+                    const planet = planetData.find((p) => p.name === bodyName);
+                    const trailColor = planet?.trailColor;
+
+                    return (
+                        <Orbit
+                            key={bodyName}
+                            orbitPath={path}
+                            color={color}
+                            opacity={opacity}
+                            scene={sceneRef.current}
+                            positionScale={bodyName === "Halley" ? cometDistanceScale : positionScale}
+                            moonDistanceScale={moonDistanceScale}
+                            bodyName={bodyName}
+                            completedOrbits={completedOrbits}
+                            trailColor={trailColor}
+                        />
+                    );
+                })}
         </>
     );
 };

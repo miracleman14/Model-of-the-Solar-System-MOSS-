@@ -66,8 +66,65 @@ const TEXTURES = {
     "Halley": textureLoader.load('/textures/comet.jpg'), // Add a texture for Halley's Comet
 };
 
-// --- Helper function for creating materials ---
-function createPlanetMaterial(texture, isSun = false, isComet = false) {
+/**
+ * Creates a planet, moon, or comet mesh.
+ */
+export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) => {
+    const isMoon = body.name.includes("Moon") || body.name in MOON_SIZES;
+    const isSun = body.name === "Sun";
+    const isComet = body.name === "Halley";
+
+    // Use the size property for custom planets, fallback to predefined sizes
+    let radius = body.size || sizes[body.name] || 1; // Default to 1 if no size is provided
+
+    // Adjust radius for the Sun and comets
+    if (isSun) {
+        radius = radius / 5; // Scale down the Sun's radius for better visualization
+    } else if (isComet) {
+        radius = Math.max(radius * 20, 0.2); // Ensure comets are visible
+    }
+
+    const geometry = new THREE.SphereGeometry(
+        Math.max(radius, 0.1), // Ensure a minimum radius
+        isMoon ? 32 : 64,      // Lower resolution for moons
+        isMoon ? 32 : 64
+    );
+
+    // Use the planet's color if provided, otherwise fallback to predefined textures
+    const texture = TEXTURES[body.name] || null;
+    const material = createPlanetMaterial(texture, isSun, isComet, body.planetColor);
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = body.name;
+    mesh.userData.scaledRadius = radius;
+    mesh.userData.isComet = isComet;
+
+    // Enable shadows for non-Sun and non-comet objects
+    if (!isSun && !isComet) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+    }
+
+    // Position the mesh
+    const distanceScale = isMoon ? moonDistanceScale : positionScale;
+    mesh.position.set(
+        body.x / distanceScale,
+        body.y / distanceScale,
+        body.z / distanceScale
+    );
+
+    // Add a comet trail if it's a comet
+    if (isComet) {
+        addCometTrail(mesh);
+    }
+
+    return mesh;
+};
+
+/**
+ * Creates a material for a planet, moon, or comet.
+ */
+function createPlanetMaterial(texture, isSun = false, isComet = false, planetColor = '#ffffff') {
     if (isSun) {
         // For the Sun, use MeshBasicMaterial for pure emission
         return new THREE.MeshBasicMaterial({
@@ -77,102 +134,43 @@ function createPlanetMaterial(texture, isSun = false, isComet = false) {
         });
     } else if (isComet) {
         // For comets, add a glowing effect
-        const material = new THREE.MeshStandardMaterial({
+        return new THREE.MeshStandardMaterial({
             map: texture,
             emissive: 0x88aaff,      // Blue-white glow
             emissiveIntensity: 0.000001,   // Stronger glow than planets
             toneMapped: false,
         });
-        return material;
     } else {
         // For planets, use MeshStandardMaterial and control emissiveness via a texture.
-        const emissiveMap = texture; // Use the same texture as the diffuse map for simplicity.
         return new THREE.MeshStandardMaterial({
             map: texture,
-            emissiveMap: emissiveMap,  // Use an emissive map
-            emissive: 0xffffff,      // Set emissive color to white (or a faint glow color)
-            emissiveIntensity: 0.02,   //  A *low* intensity for subtle glow.  Adjust as needed.
+            color: new THREE.Color(planetColor), // Use the provided planet color
+            emissive: new THREE.Color(planetColor), // Use the same color for emissive
+            emissiveIntensity: 0.02,   // Subtle glow
             toneMapped: false,       // Prevent tone mapping from dimming the emission.
         });
     }
 }
 
 /**
- * Creates a planet, moon, or comet mesh.
- */
-export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) => {
-    const isMoon = body.name.includes("Moon") || body.name in MOON_SIZES;
-    const isSun = body.name === "Sun";
-    const isComet = body.name === "Halley";
-
-    let radius;
-    if (isSun) {
-        radius = sizes[body.name] / 5;
-    } else if (isMoon) {
-        radius = sizes[body.name];
-    } else if (isComet) {
-        radius = Math.max(sizes[body.name] * 20, 0.2);
-    } else {
-        radius = sizes[body.name];
-    }
-
-    const geometry = new THREE.SphereGeometry(
-        Math.max(radius, 0.1),
-        isMoon ? 32 : 64,
-        isMoon ? 32 : 64
-    );
-
-    const material = createPlanetMaterial(TEXTURES[body.name], isSun, isComet);
-    if (body.color) {
-        material.color = new THREE.Color(body.color);
-    }
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.name = body.name;
-    mesh.userData.scaledRadius = radius;
-    mesh.userData.isComet = isComet;
-
-    if (!isSun && !isComet) {
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-    }
-
-    const distanceScale = isMoon ? moonDistanceScale : positionScale;
-    mesh.position.set(
-        body.x / distanceScale,
-        body.y / distanceScale,
-        body.z / distanceScale
-    );
-
-    if (isComet) {
-        addCometTrail(mesh);
-    }
-
-    return mesh;
-};
-
-/**
- * Creates a particle trail for comets.
+ * Adds a particle trail for comets.
  */
 const addCometTrail = (cometMesh) => {
-    // Create a particle system for the comet's tail
     const particleCount = 2000;
     const particles = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const colors = new Float32Array(particleCount * 3);
 
-    // Initialize all particles behind the comet with a random spread
     for (let i = 0; i < particleCount; i++) {
-        // Position behind the comet with some randomness
         const ix = i * 3;
-        positions[ix] = -Math.random() * 2;  // Trail extends backward
-        positions[ix + 1] = (Math.random() - 0.5) * 0.5;  // Small vertical spread
-        positions[ix + 2] = (Math.random() - 0.5) * 0.5;  // Small horizontal spread
+        positions[ix] = -Math.random() * 2;
+        positions[ix + 1] = (Math.random() - 0.5) * 0.5;
+        positions[ix + 2] = (Math.random() - 0.5) * 0.5;
 
-        // Blue-white color gradient that fades out
         const fade = 1 - (i / particleCount);
-        colors[ix] = 0.8 + (fade * 0.2);     // R: White to blue
-        colors[ix + 1] = 0.8 + (fade * 0.2); // G: White to blue
-        colors[ix + 2] = 1.0;                // B: Always high
+        colors[ix] = 0.8 + (fade * 0.2);
+        colors[ix + 1] = 0.8 + (fade * 0.2);
+        colors[ix + 2] = 1.0;
     }
 
     particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
