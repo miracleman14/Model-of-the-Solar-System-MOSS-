@@ -1,9 +1,11 @@
+import json
 import os
 import re
 import math
 import copy
 from datetime import datetime, timedelta
 from urllib import request
+import time  # Import for benchmarking
 
 import requests
 from flask import Flask, jsonify
@@ -16,6 +18,23 @@ from constants import orbital_params, planetary_masses, M_sun, G, moon_data
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])
 socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000"])
+
+# File to store custom planets
+CUSTOM_PLANETS_FILE = 'custom_planets.json'
+
+def load_custom_planets():
+    """Load custom planets from the JSON file."""
+    try:
+        with open(CUSTOM_PLANETS_FILE, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+
+def save_custom_planets(planets):
+    """Save custom planets to the JSON file."""
+    with open(CUSTOM_PLANETS_FILE, 'w') as f:
+        json.dump(planets, f)
+
 
 # --- Load Ephemeris Files (Simplified) ---
 eph = load('de440.bsp')  # Main solar system ephemeris
@@ -66,45 +85,58 @@ jupiter_moon_ids = {
 
 
 def initialize_small_body(small_body_id, name):
-    """Initializes a small body (e.g., comet) using the JPL Horizons API.
+    """Initializes a small body with caching."""
 
-    Args:
-        small_body_id: The JPL Horizons ID for the small body (e.g., "1P" for Halley).
-        name:  The name of the small body.
+    cache_file = f'cache_{name}.json'
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+            # Validate cached data
+            if all(key in cached_data for key in ["x", "y", "z", "vx", "vy", "vz"]):
+                print(f"Using cached data for {name}")
+                return cached_data
+        except (json.JSONDecodeError, FileNotFoundError):
+            print(f"Invalid or missing cache file for {name}.  Fetching from JPL...")
 
-    Returns:
-        A dictionary representing the small body, with initial position and velocity.
-        Returns None if data cannot be fetched or parsed.
-    """
+    # If no cache, or cache is invalid, fetch data.
+    small_body = _fetch_small_body_data(small_body_id, name)
+
+    if small_body:
+        # Cache the fetched data
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(small_body, f)
+        except IOError as e:
+            print(f"Warning: Could not write cache file for {name}: {e}")
+    return small_body
+
+def _fetch_small_body_data(small_body_id, name):
+    """Fetches small body data from JPL Horizons (internal helper)."""
     ts = load.timescale()
-    t = ts.now()  # Get current time in UTC
-    yesterday = t - 1  # Subtract one day to get *yesterday* in UTC
-    start_time = yesterday.utc_strftime('%Y-%m-%d')  # Format *yesterday's* date
-    end_time = (yesterday + 1).utc_strftime('%Y-%m-%d')  # Format *today's* date
+    t = ts.now()
+    yesterday = t - 1
+    start_time = yesterday.utc_strftime('%Y-%m-%d')
+    end_time = (yesterday + 1).utc_strftime('%Y-%m-%d')
 
-    # Step 1: Fetch the list of matching small bodies
     list_url = (
         f"https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='{small_body_id}'"
         f"&OBJ_DATA='YES'&MAKE_EPHEM='NO'"
     )
 
     try:
-        #print(f"Fetching {name}'s small-body records from: {list_url}")
         response = requests.get(list_url, timeout=10)
         response.raise_for_status()
         data = response.json()
 
-        # Extract the first record number (most recent epoch)
         result = data.get('result', '')
         match = re.search(r"^\s*(\d+)\s+", result, re.MULTILINE)
         if not match:
-            print(f"Warning: Could not find a valid record number for {name}.")
-            return None  # Return None to indicate failure
+            print(f"Warning: Could not find record number for {name}.")
+            return None
 
         record_number = match.group(1)
-        #print(f"Selected record number for {name}: {record_number}")
 
-        # Step 2: Fetch ephemeris data for the selected record
         ephemeris_url = (
             f"https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='{record_number}'"
             f"&OBJ_DATA='NO'&MAKE_EPHEM='YES'&EPHEM_TYPE='VECTORS'&CENTER='500@0'"
@@ -113,50 +145,41 @@ def initialize_small_body(small_body_id, name):
             f"&STEP_SIZE='1d'"
         )
 
-        #print(f"Fetching {name}'s ephemeris data from: {ephemeris_url}")
         response = requests.get(ephemeris_url, timeout=10)
         response.raise_for_status()
         data = response.json()
 
-        # Log the full API response for debugging
         result = data.get('result', '')
-        #print(f"{name} Ephemeris API Response:", result)
-
-        # Extract data between $$SOE and $$EOE
         soe_index = result.find("$$SOE")
         eoe_index = result.find("$$EOE")
         if soe_index == -1 or eoe_index == -1:
-            print(f"Warning: Could not find ephemeris markers for {name}.")
-            return None  # Return None to indicate failure
+            print(f"Warning: Ephemeris markers not found for {name}.")
+            return None
 
         ephemeris_data = result[soe_index + len("$$SOE"):eoe_index].strip()
         lines = ephemeris_data.split('\n')
 
-        # Parse the first data line
         if not lines:
-            print(f"Warning: No ephemeris data found for {name}.")
-            return None  # Return None to indicate failure
-
-        # Split the first line into components
-        components = lines[0].strip().split(',')
-        if len(components) < 7:
-            print(f"Warning: Insufficient ephemeris components for {name}.")
+            print(f"Warning: No ephemeris data for {name}.")
             return None
 
-        # Extract position (X, Y, Z) and velocity (VX, VY, VZ)
-        x = float(components[2].strip()) * 1e3  # Convert km to meters
-        y = float(components[3].strip()) * 1e3  # Convert km to meters
-        z = float(components[4].strip()) * 1e3  # Convert km to meters
-        vx = float(components[5].strip()) * 1e3  # Convert km/s to m/s
-        vy = float(components[6].strip()) * 1e3  # Convert km/s to m/s
-        vz = float(components[7].strip()) * 1e3  # Convert km/s to m/s
+        components = lines[0].strip().split(',')
+        if len(components) < 7:
+            print(f"Warning: Insufficient components for {name}.")
+            return None
+
+        x = float(components[2].strip()) * 1e3
+        y = float(components[3].strip()) * 1e3
+        z = float(components[4].strip()) * 1e3
+        vx = float(components[5].strip()) * 1e3
+        vy = float(components[6].strip()) * 1e3
+        vz = float(components[7].strip()) * 1e3
 
 
-        #  Create and return the dictionary
         small_body = {
             "name": name,
-            "mass": 1e14,  # Placeholder mass.  Comets are *tiny* compared to planets
-            "radius": 5000, # Placeholder.
+            "mass": 1e14,
+            "radius": 5000,
             "x": x,
             "y": y,
             "z": z,
@@ -170,29 +193,50 @@ def initialize_small_body(small_body_id, name):
         return small_body
 
     except (requests.RequestException, ValueError, KeyError, IndexError) as e:
-        print(f"Error fetching/parsing {name}'s data from JPL Horizons: {e}")
-        return None  # Critical: Return None to signal failure
+        print(f"Error fetching/parsing {name}'s data: {e}")
+        return None
+
 
 
 def fetch_real_positions_for_today():
+    """Fetches and caches initial positions, then loads from cache."""
+
+    cache_file = 'initial_positions_cache.json'
+
+    # Try to load from cache
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+            # Basic cache validation (check if all expected planets are there)
+            required_keys = ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"]
+            if all(any(body["name"] == key for body in cached_data) for key in required_keys):
+                print("Using cached initial positions.")
+                return cached_data
+            else:
+                print("Cached data is incomplete. Refetching...")
+        except (json.JSONDecodeError, FileNotFoundError):
+            print("Invalid or missing cache file.  Fetching from JPL...")
+
+
+
+    # Fetch initial data (Skyfield for major bodies, JPL Horizons for small bodies)
     ts = load.timescale()
     current_time = ts.now()
     initial_data = []
 
-    # Planets
+    # --- Planets ---
     for planet_name, planet in planets_skyfield.items():
         planet_position = planet.at(current_time).observe(sun)
         position = planet_position.position.au
         x, y, z = position[0] * 1.496e11, position[1] * 1.496e11, position[2] * 1.496e11
-
-        # Get velocity from Skyfield (more accurate than differentiating position)
         velocity_vector = planet.at(current_time).observe(sun).velocity.km_per_s
-        vx, vy, vz = velocity_vector[0] * 1000, velocity_vector[1] * 1000, velocity_vector[2] * 1000  # km/s to m/s
+        vx, vy, vz = velocity_vector[0] * 1000, velocity_vector[1] * 1000, velocity_vector[2] * 1000
 
         initial_data.append({
             "name": planet_name.capitalize(),
             "mass": planetary_masses[planet_name],
-            "radius": 6371000,  # Placeholder, adjust as needed
+            "radius": 6371000,
             "x": x,
             "y": y,
             "z": z,
@@ -204,7 +248,7 @@ def fetch_real_positions_for_today():
             "az": 0,
         })
 
-    # Sun
+    # --- Sun ---
     initial_data.insert(0, {
         "name": "Sun",
         "mass": M_sun,
@@ -220,17 +264,14 @@ def fetch_real_positions_for_today():
         "az": 0,
     })
 
-    # Earth's data (needed for Moon)
+    # --- Earth and Moon (for relative positioning) ---
     earth_data = next(p for p in initial_data if p['name'] == 'Earth')
     earth_x, earth_y, earth_z = earth_data['x'], earth_data['y'], earth_data['z']
     earth_vx, earth_vy, earth_vz = earth_data['vx'], earth_data['vy'], earth_data['vz']
 
-    # Moon
     moon_position = eph['moon'].at(current_time).observe(eph['earth barycenter'])
     moon_pos_au = moon_position.position.au
     moon_rel_x, moon_rel_y, moon_rel_z = moon_pos_au[0] * 1.496e11, moon_pos_au[1] * 1.496e11, moon_pos_au[2] * 1.496e11
-
-    # Get Moon velocity relative to Earth
     moon_velocity = eph['moon'].at(current_time).observe(eph['earth barycenter']).velocity.km_per_s
     moon_rel_vx, moon_rel_vy, moon_rel_vz = moon_velocity[0] * 1000, moon_velocity[1] * 1000, moon_velocity[2] * 1000
 
@@ -256,23 +297,22 @@ def fetch_real_positions_for_today():
         "az": 0,
     })
 
-    # --- Other Moons (using jup365.bsp and IDs) ---
+    # --- Other Moons ---
     for moon_name, moon in moon_data.items():
-        if moon_name == 'Moon':  # Already handled above
+        if moon_name == 'Moon':
             continue
 
         parent_name = moon['parent']
 
         if parent_name == "Jupiter":
-            # --- Use the Jupiter-specific ephemeris and ID mapping ---
             moon_id = jupiter_moon_ids.get(moon_name)
             if moon_id is None:
-                print(f"Error:  No ID found for Jupiter moon '{moon_name}'")
-                continue  # Skip if no ID
+                print(f"Error: No ID for Jupiter moon '{moon_name}'")
+                continue
 
             try:
-                moon_body = jup[moon_id]  # Use the ID!
-                parent_barycenter = jup[599]  # Jupiter Barycenter ID is 599
+                moon_body = jup[moon_id]
+                parent_barycenter = jup[599]
             except KeyError:
                 print(f"Error: Could not find {moon_name} (ID {moon_id}) in Jupiter ephemeris.")
                 continue
@@ -280,14 +320,12 @@ def fetch_real_positions_for_today():
             relative_position = moon_body.at(current_time).observe(parent_barycenter)
             relative_velocity = moon_body.at(current_time).observe(parent_barycenter).velocity
 
-            # Get Jupiter's position and velocity from initial_data
             jupiter_data = next(p for p in initial_data if p['name'] == 'Jupiter')
             jupiter_x, jupiter_y, jupiter_z = jupiter_data['x'], jupiter_data['y'], jupiter_data['z']
             jupiter_vx, jupiter_vy, jupiter_vz = jupiter_data['vx'], jupiter_data['vy'], jupiter_data['vz']
 
-            # Calculate absolute position and velocity
-            moon_rel_x, moon_rel_y, moon_rel_z = relative_position.position.au * 1.496e11  # AU to meters
-            moon_rel_vx, moon_rel_vy, moon_rel_vz = relative_velocity.km_per_s * 1000  # km/s to m/s
+            moon_rel_x, moon_rel_y, moon_rel_z = relative_position.position.au * 1.496e11
+            moon_rel_vx, moon_rel_vy, moon_rel_vz = relative_velocity.km_per_s * 1000
 
             moon_x = jupiter_x + moon_rel_x
             moon_y = jupiter_y + moon_rel_y
@@ -296,15 +334,13 @@ def fetch_real_positions_for_today():
             moon_vy = jupiter_vy + moon_rel_vy
             moon_vz = jupiter_vz + moon_rel_vz
 
-        elif parent_name == "Earth":  # Redundant, but good for clarity
-            continue  # Skip, we already did the Earth's moon
+        elif parent_name == "Earth":
+            continue
 
         else:
-            # Placeholder for other planets' moons (use specific ephemeris files if available)
-            # *Highly* simplified approximation:  Circular orbit
             parent_planet = next(p for p in initial_data if p['name'] == moon['parent'])
-            angle = math.atan2(parent_planet['y'], parent_planet['x'])  # Angle of parent planet from Sun
-            semi_major_axis = moon.get('semi_major_axis', moon.get('distance', 0))  # Use 'distance' if semi_major_axis is missing
+            angle = math.atan2(parent_planet['y'], parent_planet['x'])
+            semi_major_axis = moon.get('semi_major_axis', moon.get('distance', 0))
 
             if semi_major_axis == 0:
                 raise ValueError(f"Moon {moon_name} has no valid semi_major_axis or distance.")
@@ -312,11 +348,11 @@ def fetch_real_positions_for_today():
             orbital_velocity = math.sqrt(G * parent_planet['mass'] / semi_major_axis)
             moon_vx = parent_planet['vx'] - orbital_velocity * math.sin(angle)
             moon_vy = parent_planet['vy'] + orbital_velocity * math.cos(angle)
-            moon_vz = parent_planet['vz']  # Assume same z-velocity as parent
+            moon_vz = parent_planet['vz']
 
             moon_x = parent_planet['x'] + semi_major_axis * math.cos(angle)
             moon_y = parent_planet['y'] + semi_major_axis * math.sin(angle)
-            moon_z = parent_planet['z']  # Assume same z-position as parent
+            moon_z = parent_planet['z']
 
         initial_data.append({
             "name": moon_name,
@@ -333,12 +369,23 @@ def fetch_real_positions_for_today():
             "az": 0,
         })
 
-    # Add Halley's Comet, handling potential failures
+    # --- Small Bodies (using cached initialization) ---
     halley = initialize_small_body("1P", "Halley")
-    if halley:  # Only add if initialization was successful
+    if halley:
         initial_data.append(halley)
     else:
         print("Warning: Halley's Comet data could not be initialized.")
+
+    # --- Custom Planets ---
+    custom_planets = load_custom_planets()
+    initial_data.extend(custom_planets)
+
+    # Cache the fetched data
+    try:
+        with open(cache_file, 'w') as f:
+            json.dump(initial_data, f)
+    except IOError as e:
+        print(f"Warning: Could not write cache file: {e}")
 
     return initial_data
 
@@ -393,6 +440,7 @@ dt = 1  # Initial time step
 @socketio.on('start_simulation')
 def start_simulation():
     global simulation_running, virtual_date, dt, planets  # Ensure planets is in the global scope
+
     if simulation_running:
         emit('error', {'message': 'Simulation is already running'})
         return
@@ -486,6 +534,7 @@ def start_simulation():
     finally:
         simulation_running = False
 
+
 @socketio.on('stop_simulation')
 def stop_simulation():
     global simulation_running
@@ -534,48 +583,75 @@ def get_planet_data():
 
 @app.route('/api/orbit-paths')
 def get_orbit_paths():
+    """Calculates and caches orbit paths."""
+    orbit_paths_cache_file = 'orbit_paths_cache.json'
+
+    if os.path.exists(orbit_paths_cache_file):
+        try:
+            with open(orbit_paths_cache_file, 'r') as f:
+                cached_paths = json.load(f)
+                print("loaded orbit paths from cache")
+                return jsonify(cached_paths)
+
+        except (json.JSONDecodeError, FileNotFoundError):
+            print("invalid orbit paths cache file")
+
     orbit_paths = {}
     ts = load.timescale()
     now = ts.now()
+
     # Calculate orbit paths for planets
     for planet_name, params in orbital_params.items():
         planet = planets_skyfield[planet_name.lower()]
         period_days = params['orbital_period']
-        #Calculate num points to keep it consistent
-        num_points = int(period_days)  # One point per day
+        num_points = int(period_days)
         points = []
 
         for i in range(num_points):
             t = now + (i / num_points) * period_days
             position = planet.at(t).observe(sun).position.au
-            x, y = position[0], position[1] # Only take x,y
+            x, y = position[0], position[1]
             points.append([x, y])
         orbit_paths[planet_name] = points
 
-    #Halley
-    halley = initialize_small_body("1P", "Halley")  # Fetch current data
+    # Calculate orbit path for Halley (using cached data if available)
+    halley = initialize_small_body("1P", "Halley")
     if halley:
-        halley_period = 76 * 365.25  # Approximate orbital period in days
-        num_points = int(halley_period/10) # Reduce density by a factor of 10.
+        halley_period = 76 * 365.25
+        num_points = int(halley_period / 10)
         halley_points = []
 
         for i in range(num_points):
             t = now + (i / num_points) * halley_period
-            # Use a very simplified orbital calculation for now (circular, in the ecliptic)
-            #   Improvement:  Could use a Kepler solver for better accuracy.
-            time_since_perihelion = (t - ts.utc(1986, 2, 9)).days  # Feb 9, 1986 was last perihelion
+            time_since_perihelion = (t - ts.utc(1986, 2, 9)).days
             mean_anomaly = 2 * math.pi * (time_since_perihelion % halley_period) / halley_period
-            # VERY rough approximation, assuming circular orbit and ecliptic plane
-            r = 17.8 * 1.496e11  # Halley's semi-major axis in meters
-            x = r * math.cos(mean_anomaly) / 1.496e11 # AU
-            y = r * math.sin(mean_anomaly) / 1.496e11 # AU
+            r = 17.8 * 1.496e11
+            x = r * math.cos(mean_anomaly) / 1.496e11
+            y = r * math.sin(mean_anomaly) / 1.496e11
             halley_points.append([x, y])
         orbit_paths['halley'] = halley_points
+
+    #store orbit paths in cache
+    try:
+        with open(orbit_paths_cache_file, 'w') as f:
+            json.dump(orbit_paths, f)
+            print("Stored orbit paths in cache")
+    except IOError as e:
+        print(f"Warning: Could not write orbit paths cache file: {e}")
+
+
     return jsonify(orbit_paths)
+
+
 
 @app.route('/create_planet', methods=['POST'])
 def create_planet():
-    global planets  # Ensure planets is updated globally
+    global planets, simulation_running, virtual_date
+
+    # Stop the simulation
+    simulation_running = False
+
+    # Parse the new planet data from the request
     data = request.json
     new_planet = {
         "name": data['name'],
@@ -593,12 +669,23 @@ def create_planet():
         "color": data['planetColor'],
         "trailColor": data['trailColor']
     }
+
+    # Load existing custom planets and add the new one
+    custom_planets = load_custom_planets()
+    custom_planets.append(new_planet)
+    save_custom_planets(custom_planets)
+
+    # Reset the simulation state to the initial state
+    planets = fetch_real_positions_for_today()  # Reinitialize planets to their initial positions
+    virtual_date = datetime.now()  # Reset the virtual date to the current time
+
+    # Add the new planet to the planets list
     planets.append(new_planet)
-    # Reset simulation
-    global simulation_running
-    simulation_running = False
-    planets = fetch_real_positions_for_today()  # Reinitialize planets
+
+    # Restart the simulation
     simulation_running = True
+    start_simulation()  # Call the simulation start function
+
     return jsonify({"message": "Planet created", "planet": new_planet})
 
 
@@ -606,6 +693,12 @@ def create_planet():
 
 @socketio.on('create_planet')
 def handle_create_planet(data):
+    global planets, simulation_running  # Ensure planets and simulation_running are updated globally
+
+    # Stop the simulation
+    simulation_running = False
+
+    # Create the new planet
     new_planet = {
         "name": data['name'],
         "mass": data['mass'],
@@ -620,11 +713,18 @@ def handle_create_planet(data):
         "ay": 0,
         "az": 0,
         "color": data['planetColor'],
-        "trailColor": data['trailColor']  # Include trailColor in the response
+        "trailColor": data['trailColor']
     }
-    planets.append(new_planet)
-    emit('planet_created', new_planet, broadcast=True)
 
+    # Add the new planet to the planets list
+    planets.append(new_planet)
+
+    # Restart the simulation
+    simulation_running = True
+    start_simulation()  # Call the simulation start function
+
+    # Emit the new planet data to all clients
+    emit('planet_created', new_planet, broadcast=True)
 
 
 

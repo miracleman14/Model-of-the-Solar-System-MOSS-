@@ -64,6 +64,7 @@ const TEXTURES = {
     "Ganymede": textureLoader.load('/textures/ganymede.jpg'),
     "Callisto": textureLoader.load('/textures/callisto.jpg'),
     "Halley": textureLoader.load('/textures/comet.jpg'), // Add a texture for Halley's Comet
+    "SaturnRings": textureLoader.load('/textures/saturn_rings.jpg')
 };
 
 /**
@@ -73,6 +74,7 @@ export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) 
     const isMoon = body.name.includes("Moon") || body.name in MOON_SIZES;
     const isSun = body.name === "Sun";
     const isComet = body.name === "Halley";
+    const isSaturn = body.name === "Saturn"; // Check if the body is Saturn
 
     // Use the size property for custom planets, fallback to predefined sizes
     let radius = body.size || sizes[body.name] || 1; // Default to 1 if no size is provided
@@ -118,7 +120,47 @@ export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) 
         addCometTrail(mesh);
     }
 
+    // Add rings if it's Saturn
+    if (isSaturn) {
+        addSaturnRings(mesh, radius);
+    }
+
     return mesh;
+};
+
+/**
+ * Adds rings to Saturn.
+ */
+const addSaturnRings = (saturnMesh, planetRadius) => {
+    // Define ring dimensions
+    const innerRadius = planetRadius * 1.5; // Inner radius of the rings
+    const outerRadius = planetRadius * 2.5; // Outer radius of the rings
+    const thetaSegments = 64; // Number of segments around the ring
+
+    // Create ring geometry
+    const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, thetaSegments);
+
+    // Load the ring texture
+    const ringTexture = TEXTURES["SaturnRings"];
+    ringTexture.wrapS = THREE.RepeatWrapping;
+    ringTexture.wrapT = THREE.RepeatWrapping;
+    ringTexture.repeat.set(1, 1); // Adjust texture repetition if needed
+
+    // Create ring material
+    const ringMaterial = new THREE.MeshBasicMaterial({
+        map: ringTexture,
+        side: THREE.DoubleSide, // Render both sides of the ring
+        transparent: true,      // Enable transparency
+        opacity: 0.8,           // Adjust opacity for a more realistic look
+    });
+
+    // Create the ring mesh
+    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+    ringMesh.rotation.x = Math.PI / 2; // Rotate the ring to align with Saturn's equator
+    ringMesh.name = 'saturnRings';
+
+    // Add the ring mesh as a child of Saturn
+    saturnMesh.add(ringMesh);
 };
 
 /**

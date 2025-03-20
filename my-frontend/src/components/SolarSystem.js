@@ -15,11 +15,11 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import PlanetCreationForm from './PlanetCreationForm';
-
+import PlanetCreationModal from './PlanetCreationModal';
 
 
 const SolarSystem = () => {
-    const { planetData, date, isPaused, handleSimulationToggle } = useFetchPlanets();
+    const { planetData, date, isPaused, handleSimulationToggle, setPlanetData } = useFetchPlanets();
     const { socket, emitEvent, onEvent, timeInterval } = useSocket('http://localhost:5000');
     const [speed, setSpeed] = useState(1);
     const [selectedPlanet, setSelectedPlanet] = useState(null);
@@ -49,6 +49,8 @@ const SolarSystem = () => {
     const [createdPlanets, setCreatedPlanets] = useState([]);
     // Add a ref to store initial planet positions
     const initialPlanetPositionsRef = useRef({});
+    const [isPlanetCreationModalOpen, setIsPlanetCreationModalOpen] = useState(false);
+    const needsUpdateRef = useRef(false); // Ref to track if an update is needed
 
 
     // Function to calculate the distance between two 3D points
@@ -61,12 +63,10 @@ const SolarSystem = () => {
     };
 
     const handleCreatePlanet = (newPlanet) => {
-        // Add proper radius scaling
         const scaledPlanet = {
             ...newPlanet,
-            radius: newPlanet.size * 6371000, // Scale size to match other planets
-            // Use distanceFromSun to calculate actual position
-            x: newPlanet.distanceFromSun * 1.496e+11, // 1 AU in meters
+            radius: newPlanet.size * 6371000,
+            x: newPlanet.distanceFromSun * 1.496e+11,
             y: 0,
             z: 0
         };
@@ -74,7 +74,47 @@ const SolarSystem = () => {
         console.log("Creating new planet:", scaledPlanet);
         emitEvent('create_planet', scaledPlanet);
         setCreatedPlanets(prevPlanets => [...prevPlanets, newPlanet.name]);
+        setIsPlanetCreationModalOpen(false);
+
+        socket.once('planet_created', () => {
+            console.log("Simulation restarted with the new planet.");
+            fetchPlanetData();
+        });
     };
+
+    const fetchPlanetData = async () => {
+        try {
+            const response = await fetch('/api/get-simulation-state');
+            const data = await response.json();
+            setPlanetData(data.planets); // Use setPlanetData here
+            needsUpdateRef.current = true; // Set the update flag
+        } catch (error) {
+            console.error("Error fetching updated planet data:", error);
+        }
+    };
+
+    //Effect to handle automatic pausing and resuming.
+    useEffect(() => {
+        if (needsUpdateRef.current) {
+            const initialPauseState = isPaused;
+            if (!initialPauseState) {
+                handleSimulationToggle();
+            }
+
+            const timeout1 = setTimeout(() => {
+                if (!initialPauseState)
+                    handleSimulationToggle();
+
+                needsUpdateRef.current = false;
+
+            }, 100)
+
+            return () => {
+                clearTimeout(timeout1);
+            };
+        }
+    }, [needsUpdateRef.current])
+
 
     useEffect(() => {
         if (planetData.length > 0 && sceneRef.current) {
@@ -141,7 +181,7 @@ const SolarSystem = () => {
             );
             composer.addPass(bloomPass);
 
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            const ambientLight = new THREE.AmbientLight(0x404040, 10.5);
             scene.add(ambientLight);
 
             const sunLight = new THREE.PointLight(0xffffff, 5, 0, 2);
@@ -581,7 +621,7 @@ const SolarSystem = () => {
             <div className="controls-container">
                 <div>
                     Date: {date} ({timeInterval})
-                    <br />
+                    <br/>
                     Speed:
                     <input
                         type="range"
@@ -595,6 +635,9 @@ const SolarSystem = () => {
                     </button>
                     <button onClick={toggleOrbitLines}>
                         {showOrbitLines ? 'Hide Orbit Lines' : 'Show Orbit Lines'}
+                    </button>
+                    <button onClick={() => setIsPlanetCreationModalOpen(true)}>
+                        Create Planet
                     </button>
                 </div>
             </div>
@@ -619,10 +662,12 @@ const SolarSystem = () => {
                 ))}
             </div>
 
-            {/* Planet Creation Form */}
-            <div className="planet-creation-form">
-                <PlanetCreationForm onCreatePlanet={handleCreatePlanet} />
-            </div>
+            {/* Planet Creation Modal */}
+            <PlanetCreationModal
+                isOpen={isPlanetCreationModalOpen}
+                onClose={() => setIsPlanetCreationModalOpen(false)}
+                onCreatePlanet={handleCreatePlanet}
+            />
 
             {/* Planet Modal */}
             {selectedPlanet && (

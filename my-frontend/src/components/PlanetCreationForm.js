@@ -1,5 +1,4 @@
-// PlanetCreationForm.js
-import React, { useState, useRef, useEffect } from 'react'; // Import useRef and useEffect
+import React, { useState } from 'react';
 import PlanetPreview from './PlanetPreview';
 
 const PlanetCreationForm = ({ onCreatePlanet }) => {
@@ -10,6 +9,25 @@ const PlanetCreationForm = ({ onCreatePlanet }) => {
     const [planetColor, setPlanetColor] = useState('#ffffff');
     const [trailColor, setTrailColor] = useState('#ffffff');
 
+    // Predefined options for distance from the sun
+    const distanceOptions = [
+        { label: 'Close (Near Venus)', value: 0.7 }, // ~0.7 AU
+        { label: 'Medium (Near Jupiter)', value: 5 }, // ~5 AU
+        { label: 'Far (Beyond Neptune)', value: 30 }, // ~30 AU
+    ];
+
+    // Predefined options for size and mass
+    const sizeOptions = [
+        { label: 'Small (Moon-sized)', value: 0.1 },
+        { label: 'Medium (Earth-sized)', value: 1 },
+        { label: 'Large (Jupiter-sized)', value: 10 },
+    ];
+
+    const massOptions = [
+        { label: 'Light (Moon-mass)', value: 0.01 },
+        { label: 'Medium (Earth-mass)', value: 1 },
+        { label: 'Heavy (Jupiter-mass)', value: 318 },
+    ];
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -25,7 +43,7 @@ const PlanetCreationForm = ({ onCreatePlanet }) => {
             mass: parseFloat(mass),
             distanceFromSun: parseFloat(distanceFromSun),
             planetColor,
-            trailColor
+            trailColor,
         };
 
         onCreatePlanet(newPlanet);
@@ -39,47 +57,97 @@ const PlanetCreationForm = ({ onCreatePlanet }) => {
     };
 
     return (
-        <div style={{ display: 'flex', gap: '20px' }}>
-            <form onSubmit={handleSubmit} style={{flex: 1}}>
+        <div className="planet-creation-form-container">
+            <form onSubmit={handleSubmit} className="planet-creation-form">
                 <label>
                     Planet Name:
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        placeholder="Enter planet name"
+                    />
                 </label>
+
                 <label>
                     Size:
-                    <select value={size} onChange={(e) => setSize(parseFloat(e.target.value))}>
-                        <option value={0.1}>Small</option>
-                        <option value={0.5}>Medium</option>
-                        <option value={1}>Large</option>
+                    <select
+                        value={size}
+                        onChange={(e) => setSize(parseFloat(e.target.value))}
+                        required
+                    >
+                        {sizeOptions.map((option) => (
+                            <option key={option.label} value={option.value}>
+                                {option.label} ({option.value} Earth radii)
+                            </option>
+                        ))}
                     </select>
                 </label>
+
                 <label>
                     Mass:
-                    <select value={mass} onChange={(e) => setMass(parseFloat(e.target.value))}>
-                        <option value={0.1}>Light</option>
-                        <option value={0.5}>Medium</option>
-                        <option value={1}>Heavy</option>
+                    <select
+                        value={mass}
+                        onChange={(e) => setMass(parseFloat(e.target.value))}
+                        required
+                    >
+                        {massOptions.map((option) => (
+                            <option key={option.label} value={option.value}>
+                                {option.label} ({option.value} Earth masses)
+                            </option>
+                        ))}
                     </select>
                 </label>
+
                 <label>
                     Distance from Sun:
-                    <select value={distanceFromSun} onChange={(e) => setDistanceFromSun(parseFloat(e.target.value))}>
-                        <option value={1}>Close</option>
-                        <option value={10}>Medium</option>
-                        <option value={100}>Far</option>
+                    <select
+                        value={distanceFromSun}
+                        onChange={(e) => setDistanceFromSun(parseFloat(e.target.value))}
+                        required
+                    >
+                        {distanceOptions.map((option) => (
+                            <option key={option.label} value={option.value}>
+                                {option.label} ({option.value} AU)
+                            </option>
+                        ))}
                     </select>
                 </label>
+
                 <label>
                     Planet Color:
-                    <input type="color" value={planetColor} onChange={(e) => setPlanetColor(e.target.value)} required />
+                    <input
+                        type="color"
+                        value={planetColor}
+                        onChange={(e) => setPlanetColor(e.target.value)}
+                        required
+                    />
                 </label>
+
                 <label>
                     Trail Color:
-                    <input type="color" value={trailColor} onChange={(e) => setTrailColor(e.target.value)} required />
+                    <input
+                        type="color"
+                        value={trailColor}
+                        onChange={(e) => setTrailColor(e.target.value)}
+                        required
+                    />
                 </label>
-                <button type="submit">Create Planet</button>
+
+                <button type="submit" className="submit-button">
+                    Create Planet
+                </button>
             </form>
-            <PlanetPreview size={size} color={planetColor} style={{flex: 1}}/>
+
+            <div className="planet-preview-container">
+                <PlanetPreview size={size} color={planetColor} />
+                <div className="preview-details">
+                    <p><strong>Size:</strong> {size} Earth radii</p>
+                    <p><strong>Mass:</strong> {mass} Earth masses</p>
+                    <p><strong>Distance from Sun:</strong> {distanceFromSun} AU</p>
+                </div>
+            </div>
         </div>
     );
 };
