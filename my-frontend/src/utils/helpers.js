@@ -28,22 +28,6 @@ const MOON_SIZES = {
 // Combine planet and moon sizes
 const sizes = { ...PLANET_SIZES, ...MOON_SIZES };
 
-// Define starfield configuration
-const STARFIELD_CONFIG = {
-    starCount: 5000, // Number of stars
-    maxStarSize: 0.3, // Maximum size of a star
-    minStarSize: 0.1, // Minimum size of a star
-    positionScale: 20000, // Scale for star positions
-};
-
-// Define orbit configuration
-const ORBIT_CONFIG = {
-    trailLengthFactor: 10, // Factor to calculate maximum trail length based on orbital period
-    cometTrailFactor: 50, // Longer trail factor for comets
-};
-
-// Define global position scales
-const positionScale = 1e10; // Scale factor for positioning planets and other celestial bodies
 
 // --- Texture Loading (Corrected Paths) ---
 const textureLoader = new THREE.TextureLoader();
@@ -70,59 +54,85 @@ const TEXTURES = {
 /**
  * Creates a planet, moon, or comet mesh.
  */
-export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) => {
+export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) => { // No need for cometDistanceScale here
     const isMoon = body.name.includes("Moon") || body.name in MOON_SIZES;
     const isSun = body.name === "Sun";
     const isComet = body.name === "Halley";
-    const isSaturn = body.name === "Saturn"; // Check if the body is Saturn
+    const isSaturn = body.name === "Saturn";
 
-    // Use the size property for custom planets, fallback to predefined sizes
-    let radius = body.size || sizes[body.name] || 1; // Default to 1 if no size is provided
 
-    // Adjust radius for the Sun and comets
+    let meshRadius;
+    const isPredefined = body.name in sizes; // Check if it's a known body
+
+    if (!isPredefined && body.radius !== undefined && typeof body.radius === 'number') {
+        // Convert back to Earth radii for relative scaling
+        const earthRadiusMeters = 6371000;
+        meshRadius = body.radius / earthRadiusMeters;
+        console.log(`Custom planet ${body.name}: Calculated meshRadius ${meshRadius} from body.radius ${body.radius}`);
+
+    } else if (body.radius !== undefined && typeof body.radius === 'number' && body.radius < 1000) {
+        // Original check for small radius values (might be redundant if size is preferred)
+        meshRadius = body.radius;
+    } else if (body.size !== undefined && typeof body.size === 'number' && body.size < 1000) {
+        // Use body.size if available (preferred for relative scaling)
+        meshRadius = body.size;
+    } else if (isPredefined) {
+        // Fallback to predefined sizes for known bodies
+        meshRadius = sizes[body.name];
+    }
+
+
+    if (meshRadius === undefined) {
+        console.warn(`No valid size/radius found for ${body.name}. Defaulting meshRadius to 1.`);
+        meshRadius = 1; // Default to 1 Earth radius equivalent
+    }
+
+
+    let visualRadius = meshRadius;
     if (isSun) {
-        radius = radius / 5; // Scale down the Sun's radius for better visualization
+        visualRadius = meshRadius / 5;
     } else if (isComet) {
-        radius = Math.max(radius * 20, 0.2); // Ensure comets are visible
+        visualRadius = Math.max(meshRadius * 20, 0.2);
     }
 
     const geometry = new THREE.SphereGeometry(
-        Math.max(radius, 0.1), // Ensure a minimum radius
-        isMoon ? 32 : 64,      // Lower resolution for moons
+        Math.max(visualRadius, 0.1),
+        isMoon ? 32 : 64,
         isMoon ? 32 : 64
     );
 
-    // Use the planet's color if provided, otherwise fallback to predefined textures
     const texture = TEXTURES[body.name] || null;
     const material = createPlanetMaterial(texture, isSun, isComet, body.planetColor);
 
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = body.name;
-    mesh.userData.scaledRadius = radius;
+    mesh.userData.scaledRadius = meshRadius; // Store original relative size
     mesh.userData.isComet = isComet;
 
-    // Enable shadows for non-Sun and non-comet objects
     if (!isSun && !isComet) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
     }
 
-    // Position the mesh
-    const distanceScale = isMoon ? moonDistanceScale : positionScale;
+    // --- SIMPLIFIED POSITIONING ---
+    // The 'positionScale' argument already contains the correct scale
+    // (general positionScale or cometDistanceScale) passed from SolarSystem.js.
+    // Moon positioning is handled relatively in SolarSystem.js, so this direct
+    // positioning is correct for planets, the sun, and comets when initially created.
     mesh.position.set(
-        body.x / distanceScale,
-        body.y / distanceScale,
-        body.z / distanceScale
+        body.x / positionScale, // Use the 'positionScale' argument directly
+        body.y / positionScale,
+        body.z / positionScale
     );
+    // --- END SIMPLIFIED POSITIONING ---
 
-    // Add a comet trail if it's a comet
+
     if (isComet) {
-        addCometTrail(mesh);
+
     }
 
-    // Add rings if it's Saturn
     if (isSaturn) {
-        addSaturnRings(mesh, radius);
+        addSaturnRings(mesh, meshRadius); // Use original meshRadius for ring proportions
     }
 
     return mesh;
@@ -168,74 +178,39 @@ const addSaturnRings = (saturnMesh, planetRadius) => {
  */
 function createPlanetMaterial(texture, isSun = false, isComet = false, planetColor = '#ffffff') {
     if (isSun) {
-        // For the Sun, use MeshBasicMaterial for pure emission
         return new THREE.MeshBasicMaterial({
             map: texture,
-            color: 0xffffcc, // Warm yellow-white color
-            toneMapped: false, // Disable tone mapping for brightness
-        });
-    } else if (isComet) {
-        // For comets, add a glowing effect
-        return new THREE.MeshStandardMaterial({
-            map: texture,
-            emissive: 0x88aaff,      // Blue-white glow
-            emissiveIntensity: 0.000001,   // Stronger glow than planets
+            color: 0xffffcc,
             toneMapped: false,
         });
-    } else {
-        // For planets, use MeshStandardMaterial and control emissiveness via a texture.
+    } else if (isComet) {
         return new THREE.MeshStandardMaterial({
-            map: texture,
-            color: new THREE.Color(planetColor), // Use the provided planet color
-            emissive: new THREE.Color(planetColor), // Use the same color for emissive
-            emissiveIntensity: 0.02,   // Subtle glow
-            toneMapped: false,       // Prevent tone mapping from dimming the emission.
+            map: texture, // Use texture if available
+            color: texture ? 0xffffff : new THREE.Color(planetColor), // Use white if texture, else planetColor
+            emissive: 0x88aaff,
+            emissiveIntensity: 0.5, // Slightly increased intensity for visibility
+            toneMapped: false,
+            roughness: 0.9,
+            metalness: 0.1,
+        });
+    } else {
+        // For planets/moons
+        const effectiveColor = planetColor ? new THREE.Color(planetColor) : new THREE.Color('#ffffff');
+        return new THREE.MeshStandardMaterial({
+            map: texture, // Apply texture if it exists
+            color: effectiveColor, // Base color, visible if no texture or texture has transparency
+            emissive: texture ? undefined : effectiveColor, // Only emit if no texture (avoids washing out texture)
+            emissiveIntensity: texture ? 0 : 0.05,   // Adjust glow intensity
+            roughness: 0.8, // Give non-textured planets some roughness
+            metalness: 0.1,
+            toneMapped: false, // Usually false is fine for space scenes unless you need specific HDR effects
         });
     }
 }
 
-/**
- * Adds a particle trail for comets.
- */
-const addCometTrail = (cometMesh) => {
-    const particleCount = 2000;
-    const particles = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
 
-    for (let i = 0; i < particleCount; i++) {
-        const ix = i * 3;
-        positions[ix] = -Math.random() * 2;
-        positions[ix + 1] = (Math.random() - 0.5) * 0.5;
-        positions[ix + 2] = (Math.random() - 0.5) * 0.5;
 
-        const fade = 1 - (i / particleCount);
-        colors[ix] = 0.8 + (fade * 0.2);
-        colors[ix + 1] = 0.8 + (fade * 0.2);
-        colors[ix + 2] = 1.0;
-    }
 
-    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const particleMaterial = new THREE.PointsMaterial({
-        size: 0.05,
-        transparent: true,
-        vertexColors: true,
-        blending: THREE.AdditiveBlending,
-        opacity: 0.8
-    });
-
-    const particleSystem = new THREE.Points(particles, particleMaterial);
-    particleSystem.name = 'cometTrail';
-    cometMesh.add(particleSystem);
-
-    return particleSystem;
-};
-
-/**
- * Updates the comet trail based on the comet's velocity vector.
- */
 export const updateCometTrail = (cometMesh, velocityVector) => {
     const trail = cometMesh.getObjectByName('cometTrail');
     if (!trail) return;
@@ -255,73 +230,5 @@ export const updateCometTrail = (cometMesh, velocityVector) => {
     trail.quaternion.setFromAxisAngle(axis, angle);
 };
 
-export const animateCameraToPosition = (camera, targetPosition, controls, duration = 1.5) => {
-    const easing = (t) => t * t * (3 - 2 * t); // Cubic easing
-    const startPos = camera.position.clone();
-    const startTime = performance.now();
 
-    const animateCamera = () => {
-        const elapsedTime = (performance.now() - startTime) / 1000;
-        const t = Math.min(elapsedTime / duration, 1);
-        const easedT = easing(t);
 
-        camera.position.lerpVectors(startPos, targetPosition, easedT);
-        controls.target.lerp(targetPosition, easedT);
-        controls.update();
-
-        if (t < 1) {
-            requestAnimationFrame(animateCamera);
-        }
-    };
-    animateCamera();
-};
-
-/**
- * Creates a starfield background.
- */
-export const createStarfield = (scene) => {
-    const { starCount, maxStarSize, minStarSize, positionScale } = STARFIELD_CONFIG;
-    const positions = new Float32Array(starCount * 3);
-    const colors = new Float32Array(starCount * 3);
-    const sizes = new Float32Array(starCount);
-
-    for (let i = 0; i < starCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * positionScale;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * positionScale;
-        positions[i * 3 + 2] = (Math.random() - 0.5) * positionScale;
-
-        const r = Math.random() * 0.5 + 0.5;
-        const g = Math.random() * 0.5 + 0.5;
-        const b = Math.random() * 0.5 + 0.5;
-        colors[i * 3] = r;
-        colors[i * 3 + 1] = g;
-        colors[i * 3 + 2] = b;
-
-        sizes[i] = Math.random() * (maxStarSize - minStarSize) + minStarSize;
-    }
-
-    const starGeometry = new THREE.BufferGeometry();
-    starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    starGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-    const starMaterial = new THREE.PointsMaterial({
-        size: 0.1,
-        transparent: true,
-        vertexColors: true,
-    });
-
-    const starField = new THREE.Points(starGeometry, starMaterial);
-    starField.isStarfield = true;
-    scene.add(starField);
-};
-
-/**
- * Calculates the maximum trail length.
- */
-export const calculateMaxTrailLength = (orbitalPeriod, isComet = false) => {
-    if (isComet) {
-        return Math.max(2000, orbitalPeriod * ORBIT_CONFIG.cometTrailFactor);
-    }
-    return Math.max(1000, orbitalPeriod * ORBIT_CONFIG.trailLengthFactor);
-};

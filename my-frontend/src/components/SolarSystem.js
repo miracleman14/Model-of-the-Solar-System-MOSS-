@@ -5,16 +5,14 @@ import '../styles/SolarSystem.css';
 import PlanetModal from './PlanetModal';
 import Labels from './Labels';
 import Starfield from './Starfield';
-import Planet from './Planet';
 import Orbit from './Orbit';
 import useFetchPlanets from '../hooks/useFetchPlanets';
 import useSocket from '../hooks/useSocket';
-import { createCelestialBodyMesh, createStarfield, updateCometTrail } from '../utils/helpers';
+import { createCelestialBodyMesh, updateCometTrail,} from '../utils/helpers';
 import { moon_data } from '../utils/constants'; // Make sure this is imported!
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import PlanetCreationForm from './PlanetCreationForm';
 import PlanetCreationModal from './PlanetCreationModal';
 
 
@@ -31,8 +29,6 @@ const SolarSystem = () => {
     const timeRef = useRef(0);
     const controlsRef = useRef(null);
     const fontRef = useRef(null);
-    const raycasterRef = useRef(new THREE.Raycaster());
-    const mouseRef = useRef(new THREE.Vector2());
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const positionScale = 1e9;
     const moonDistanceScale = 1e7;  // Base scale
@@ -145,7 +141,6 @@ const SolarSystem = () => {
             const scene = new THREE.Scene();
             sceneRef.current = scene;
 
-            createStarfield(scene);
 
             const camera = new THREE.PerspectiveCamera(
                 45,
@@ -153,10 +148,12 @@ const SolarSystem = () => {
                 1,
                 1e12
             );
-            camera.position.z = 2500;
+            camera.position.z = 500;
             cameraRef.current = camera;
 
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            const renderer = new THREE.WebGLRenderer({ antialias: true,
+                alpha: true
+            });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -509,16 +506,7 @@ const SolarSystem = () => {
         }
     }, [planetData, positionScale, moonDistanceScale, jupiterMoonScale, earthMoonDistanceScale, cometDistanceScale, completedOrbits, orbitAngles]);
 
-    // Function to reset orbits and start fresh, in case you need to clear everything
-    const resetOrbits = () => {
-        setOrbitPaths({});
-        setCompletedOrbits({});
-        setOrbitAngles({});
-    };
 
-    const closeModal = () => {
-        setSelectedPlanet(null);
-    };
 
     const centreCameraOnPlanet = (planetName) => {
         const planetMesh = sceneRef.current.getObjectByName(planetName);
@@ -583,34 +571,13 @@ const SolarSystem = () => {
         setIsSidebarOpen(false); // Close sidebar after selecting a planet
     };
 
-    const renderSidebar = () => {
-        if (!isSidebarOpen) return null;
-        const planets = ["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Moon", "Io", "Europa", "Ganymede", "Callisto", "Halley", ...createdPlanets];
-        return (
-            <div>
-                Planets
-                {planets.map((planet) => (
-                    <div
-                        key={planet}
-                        onClick={() => {
-                            handlePlanetClick(planet);
-                            setIsSidebarOpen(false);
-                        }}
-                        style={{
-                            fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        {planet}
-                    </div>
-                ))}
-            </div>
-        );
-    };
+
 
     const toggleOrbitLines = () => {
         setShowOrbitLines(prevShowOrbitLines => !prevShowOrbitLines);
     };
+
+
 
     return (
         <>
@@ -619,6 +586,9 @@ const SolarSystem = () => {
 
             {/* Controls container */}
             <div className="controls-container">
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+                    {isSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
+                </button>
                 <div>
                     Date: {date} ({timeInterval})
                     <br/>
@@ -644,22 +614,119 @@ const SolarSystem = () => {
 
             {/* Sidebar */}
             <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <h3>Planets</h3>
-                {["Sun", "Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Moon", "Io", "Europa", "Ganymede", "Callisto", "Halley", ...createdPlanets].map((planet) => (
+                <h3>Solar System Bodies</h3>
+
+                {/* Sun */}
+                <div className="sidebar-section">
                     <div
-                        key={planet}
+                        className="sidebar-item"
                         onClick={() => {
-                            handlePlanetClick(planet);
+                            handlePlanetClick("Sun");
                             setIsSidebarOpen(false);
                         }}
                         style={{
-                            fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
-                            cursor: 'pointer',
+                            fontWeight: selectedPlanet === "Sun" ? 'bold' : 'normal',
                         }}
                     >
-                        {planet}
+                        Sun
                     </div>
-                ))}
+                </div>
+
+                {/* Planets */}
+                <div className="sidebar-section">
+                    <h4>Planets</h4>
+                    {["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"].map((planet) => (
+                        <div
+                            key={planet}
+                            className="sidebar-item"
+                            onClick={() => {
+                                handlePlanetClick(planet);
+                                setIsSidebarOpen(false);
+                            }}
+                            style={{
+                                fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
+                            }}
+                        >
+                            {planet}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Earth's Moon */}
+                <div className="sidebar-section">
+                    <h4>Earth's Moon</h4>
+                    <div
+                        className="sidebar-item"
+                        onClick={() => {
+                            handlePlanetClick("Moon");
+                            setIsSidebarOpen(false);
+                        }}
+                        style={{
+                            fontWeight: selectedPlanet === "Moon" ? 'bold' : 'normal',
+                        }}
+                    >
+                        Moon
+                    </div>
+                </div>
+
+                {/* Jupiter's Moons */}
+                <div className="sidebar-section">
+                    <h4>Jupiter's Moons</h4>
+                    {["Io", "Europa", "Ganymede", "Callisto"].map((moon) => (
+                        <div
+                            key={moon}
+                            className="sidebar-item moon-item"
+                            onClick={() => {
+                                handlePlanetClick(moon);
+                                setIsSidebarOpen(false);
+                            }}
+                            style={{
+                                fontWeight: selectedPlanet === moon ? 'bold' : 'normal',
+                            }}
+                        >
+                            {moon}
+                        </div>
+                    ))}
+                </div>
+
+                {/* Comets */}
+                <div className="sidebar-section">
+                    <h4>Comets</h4>
+                    <div
+                        className="sidebar-item"
+                        onClick={() => {
+                            handlePlanetClick("Halley");
+                            setIsSidebarOpen(false);
+                        }}
+                        style={{
+                            fontWeight: selectedPlanet === "Halley" ? 'bold' : 'normal',
+                        }}
+                    >
+                        Halley's Comet
+                    </div>
+                </div>
+
+                {/* User-created Planets */}
+                {createdPlanets.length > 0 && (
+                    <div className="sidebar-section">
+                        <h4>Custom Planets</h4>
+                        {createdPlanets.map((planet) => (
+                            <div
+                                key={planet}
+                                className="sidebar-item"
+                                onClick={() => {
+                                    handlePlanetClick(planet);
+                                    setIsSidebarOpen(false);
+                                }}
+                                style={{
+                                    fontWeight: selectedPlanet === planet ? 'bold' : 'normal',
+                                }}
+                            >
+                                {planet}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Planet Creation Modal */}
@@ -669,16 +736,11 @@ const SolarSystem = () => {
                 onCreatePlanet={handleCreatePlanet}
             />
 
-            {/* Planet Modal */}
-            {selectedPlanet && (
-                <div className="planet-modal">
-                    <h2>{selectedPlanet.name}</h2>
-                    <p>Mass: {selectedPlanet.mass}</p>
-                    <p>Radius: {selectedPlanet.radius}</p>
-                    <p>Distance from Sun: {selectedPlanet.distanceFromSun}</p>
-                    <button onClick={() => setSelectedPlanet(null)}>Close</button>
-                </div>
-            )}
+            {/* Planet Modal - Use the imported component */}
+            <PlanetModal
+                planet={selectedPlanet} // Pass the selected planet object (must have a .name)
+                onClose={() => setSelectedPlanet(null)} // Pass the function to close the modal
+            />
 
             {/* Labels and Starfield */}
             <Labels scene={sceneRef.current} planetData={planetData} font={fontRef.current} />
