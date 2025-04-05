@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 
 const useSocket = (url) => {
     const socketRef = useRef(null);
-    const [timeInterval, setTimeInterval] = useState("1 day/sec"); // Default to 1 day/sec
+    const [timeInterval, setTimeInterval] = useState("0.10 days/second"); // Default to 0.1 days/sec
     const [createdPlanets, setCreatedPlanets] = useState([]); // Track created planets
 
     useEffect(() => {

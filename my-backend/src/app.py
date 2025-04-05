@@ -396,18 +396,17 @@ def adjust_speed(data):
     if speed_factor <= 0:
         speed_factor = 1
 
-    # Define a slower logarithmic scale for time
-    # The slowest should be about 1 day/second
-    # The fastest should be about 0.5 years/second (182.625 days)
     time_scales = [
-        (1, 1),              # 1 day/second (slowest)
-        (7, 2),              # 1 week/second
-        (30, 3),             # 1 month/second
-        (90, 4),             # 3 months/second
-        (182.625, 5),         # 0.5 years/second (fastest)
-        (365.5, 6),         # 1 years/second (fastest)
-        (731, 7),         # 1 years/second (fastest)
-        (1462, 8)         # 1 years/second (fastest)
+        (0.1, 1),       # 2.4 hours/second (good for watching moon orbits)
+        (1, 2),         # 1 day/second (good for inner planet orbits)
+        (7, 3),         # 1 week/second
+        (30, 4),        # 1 month/second
+        (90, 5),        # 3 months/second (quarter year)
+        (182.625, 6),   # 6 months/second (half year)
+        (365.25, 7),    # 1 year/second (Earth's orbit)
+        (730.5, 8),     # 2 years/second (good for Mars)
+        (1826.25, 9),   # 5 years/second (Jupiter's orbit)
+        (3652.5, 10)    # 10 years/second (outer planets)
     ]
 
     # Find the appropriate time scale based on speed_factor
@@ -425,6 +424,8 @@ def adjust_speed(data):
     emit('time_interval_update', {'time_interval': f"{days_per_second:.2f} days/second"})
 
 
+
+
 simulation_running = False
 virtual_date = None  # Initialize virtual_date
 dt = 1  # Initial dt value
@@ -439,10 +440,12 @@ dt = 1  # Initial time step
 
 @socketio.on('start_simulation')
 def start_simulation():
-    global simulation_running, virtual_date, dt, planets, orbit_data # Add orbit_data to global if you need to access it elsewhere, OR manage it purely within the loop
+    global simulation_running, virtual_date, dt, planets
 
-    # Prevent multiple simulation loops from starting
-    # A lock might be better for true concurrency safety, but this is a basic guard
+    # Reset speed to default (0.1 days/second = speed factor 1)
+    dt = 0.1 * (60 * 24)
+
+
     if simulation_running:
         print("Simulation loop already running.")
         # Optionally emit an error or just return
@@ -636,12 +639,22 @@ simulation_state = {
 
 @app.route('/reset')
 def reset_simulation():
-    global simulation_state, virtual_date, planets
+    global simulation_state, virtual_date, planets, dt
+
+    # Reset speed to default
+    dt = 1 * (60 * 24)  # 1 day/second
+
     planets = fetch_real_positions_for_today()
     simulation_state['planets'] = [copy.deepcopy(planet) for planet in planets]
     simulation_state['virtual_date'] = datetime.now()
     virtual_date = datetime.now()
-    return jsonify({"message": "Simulation reset", "planets": simulation_state['planets']})
+
+    return jsonify({
+        "message": "Simulation reset",
+        "planets": simulation_state['planets'],
+        "speed_reset": True
+    })
+
 
 @app.route('/api/get-simulation-state')
 def get_simulation_state():
