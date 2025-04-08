@@ -115,22 +115,22 @@ const SolarSystem = () => {
     useEffect(() => {
         if (planetData.length > 0 && sceneRef.current) {
             const scene = sceneRef.current;
-            console.log("Planet data loaded:", planetData);
+            // console.log("Planet data loaded:", planetData);
 
             planetData.forEach((body) => {
                 if (body.name === "Sun") return;
 
                 let bodyMesh = scene.getObjectByName(body.name);
-                console.log(`Processing planet: ${body.name}`, body);
+                // console.log(`Processing planet: ${body.name}`, body);
 
                 if (!bodyMesh) {
                     console.log(`Creating mesh for planet: ${body.name}`);
                     bodyMesh = createCelestialBodyMesh(body, positionScale, moonDistanceScale);
                     bodyMesh.name = body.name;
                     scene.add(bodyMesh);
-                    console.log(`Mesh created and added to scene: ${body.name}`, bodyMesh);
+                    // console.log(`Mesh created and added to scene: ${body.name}`, bodyMesh);
                 } else {
-                    console.log(`Mesh already exists for planet: ${body.name}`, bodyMesh);
+                    // console.log(`Mesh already exists for planet: ${body.name}`, bodyMesh);
                 }
             });
         }
@@ -743,7 +743,37 @@ const SolarSystem = () => {
             />
 
             {/* Labels and Starfield */}
-            <Labels scene={sceneRef.current} planetData={planetData} font={fontRef.current} />
+            <Labels
+                scene={sceneRef.current}
+                planets={planetData}
+                font={fontRef.current}
+                camera={cameraRef.current}
+            />
+
+            {/* Temporary debug helper */}
+            {sceneRef.current && (
+                <button
+                    onClick={() => {
+                        const labels = sceneRef.current.getObjectByName('planetLabels');
+                        console.log('Label group:', labels);
+                        if (labels) {
+                            labels.traverse(obj => {
+                                if (obj.name.includes('label-')) {
+                                    console.log(`Label ${obj.name}`, {
+                                        position: obj.position,
+                                        visible: obj.visible,
+                                        parent: obj.parent
+                                    });
+                                }
+                            });
+                        }
+                    }}
+                    style={{ position: 'absolute', top: '100px', left: '10px' }}
+                >
+                    Debug Labels
+                </button>
+            )}
+
             <Starfield scene={sceneRef.current} />
 
             {/* Orbit Lines */}

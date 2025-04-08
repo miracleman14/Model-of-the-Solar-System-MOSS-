@@ -48,187 +48,164 @@ const TEXTURES = {
     "Ganymede": textureLoader.load('/textures/ganymede.jpg'),
     "Callisto": textureLoader.load('/textures/callisto.jpg'),
     "Halley": textureLoader.load('/textures/comet.jpg'), // Add a texture for Halley's Comet
-    "SaturnRings": textureLoader.load('/textures/saturn_rings.jpg')
+    "SaturnRings": textureLoader.load('/textures/saturnmap.jpg')
 };
 
-/**
- * Creates a planet, moon, or comet mesh.
- */
-export const createCelestialBodyMesh = (body, positionScale, moonDistanceScale) => { // No need for cometDistanceScale here
-    const isMoon = body.name.includes("Moon") || body.name in MOON_SIZES;
+// Creates a 3D object for any space body
+export const createCelestialBodyMesh = (body, positionScale) => {
+    const isMoon = body.name in MOON_SIZES;
     const isSun = body.name === "Sun";
     const isComet = body.name === "Halley";
     const isSaturn = body.name === "Saturn";
 
+    // Calculate the size - use custom size if provided, otherwise use defaults
+    let size = calculateBodySize(body);
 
-    let meshRadius;
-    const isPredefined = body.name in sizes; // Check if it's a known body
+    // Adjust visual size for special cases
+    if (isSun) size /= 5;  // Make sun smaller on screen
+    if (isComet) size *= 20;  // Make comet nucleus visible
 
-    if (!isPredefined && body.radius !== undefined && typeof body.radius === 'number') {
-        // Convert back to Earth radii for relative scaling
-        const earthRadiusMeters = 6371000;
-        meshRadius = body.radius / earthRadiusMeters;
-        console.log(`Custom planet ${body.name}: Calculated meshRadius ${meshRadius} from body.radius ${body.radius}`);
-
-    } else if (body.radius !== undefined && typeof body.radius === 'number' && body.radius < 1000) {
-        // Original check for small radius values (might be redundant if size is preferred)
-        meshRadius = body.radius;
-    } else if (body.size !== undefined && typeof body.size === 'number' && body.size < 1000) {
-        // Use body.size if available (preferred for relative scaling)
-        meshRadius = body.size;
-    } else if (isPredefined) {
-        // Fallback to predefined sizes for known bodies
-        meshRadius = sizes[body.name];
-    }
-
-
-    if (meshRadius === undefined) {
-        console.warn(`No valid size/radius found for ${body.name}. Defaulting meshRadius to 1.`);
-        meshRadius = 1; // Default to 1 Earth radius equivalent
-    }
-
-
-    let visualRadius = meshRadius;
-    if (isSun) {
-        visualRadius = meshRadius / 5;
-    } else if (isComet) {
-        visualRadius = Math.max(meshRadius * 20, 0.2);
-    }
-
+    // Create the sphere shape
     const geometry = new THREE.SphereGeometry(
-        Math.max(visualRadius, 0.1),
-        isMoon ? 32 : 64,
+        Math.max(size, 0.1),  // Never smaller than 0.1 units
+        isMoon ? 32 : 64,     // Less detail for moons
         isMoon ? 32 : 64
     );
 
-    const texture = TEXTURES[body.name] || null;
-    const material = createPlanetMaterial(texture, isSun, isComet, body.planetColor);
+    // Create the surface appearance
+    const material = createPlanetMaterial(
+        TEXTURES[body.name],
+        isSun,
+        isComet,
+        body.planetColor
+    );
 
+    // Combine shape and appearance
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = body.name;
-    mesh.userData.scaledRadius = meshRadius; // Store original relative size
-    mesh.userData.isComet = isComet;
 
+    // Store useful data for later
+    mesh.userData = {
+        scaledRadius: size,
+        isComet: isComet
+    };
+
+    // Most objects cast shadows
     if (!isSun && !isComet) {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
     }
 
-    // --- SIMPLIFIED POSITIONING ---
-    // The 'positionScale' argument already contains the correct scale
-    // (general positionScale or cometDistanceScale) passed from SolarSystem.js.
-    // Moon positioning is handled relatively in SolarSystem.js, so this direct
-    // positioning is correct for planets, the sun, and comets when initially created.
+    // Set initial position
     mesh.position.set(
-        body.x / positionScale, // Use the 'positionScale' argument directly
+        body.x / positionScale,
         body.y / positionScale,
         body.z / positionScale
     );
-    // --- END SIMPLIFIED POSITIONING ---
 
-
-    if (isComet) {
-
-    }
-
+    // Add rings to Saturn
     if (isSaturn) {
-        addSaturnRings(mesh, meshRadius); // Use original meshRadius for ring proportions
+        addSaturnRings(mesh, size);
     }
 
     return mesh;
 };
 
-/**
- * Adds rings to Saturn.
- */
-const addSaturnRings = (saturnMesh, planetRadius) => {
-    // Define ring dimensions
-    const innerRadius = planetRadius * 1.5; // Inner radius of the rings
-    const outerRadius = planetRadius * 2.5; // Outer radius of the rings
-    const thetaSegments = 64; // Number of segments around the ring
+// Helper to determine body size
+function calculateBodySize(body) {
+    // Use custom size if provided
+    if (typeof body.size === 'number') {
+        return body.size;
+    }
 
-    // Create ring geometry
-    const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, thetaSegments);
+    // Convert meters to Earth radii if radius provided
+    if (typeof body.radius === 'number') {
+        return body.radius / 6371000;
+    }
 
-    // Load the ring texture
-    const ringTexture = TEXTURES["SaturnRings"];
-    ringTexture.wrapS = THREE.RepeatWrapping;
-    ringTexture.wrapT = THREE.RepeatWrapping;
-    ringTexture.repeat.set(1, 1); // Adjust texture repetition if needed
+    // Use predefined size for known bodies
+    if (body.name in sizes) {
+        return sizes[body.name];
+    }
 
-    // Create ring material
+    // Default to Earth size if unknown
+    console.warn(`Unknown body size for ${body.name}, using default`);
+    return 1.0;
+}
+
+// Adds rings to Saturn
+function addSaturnRings(saturnMesh, planetSize) {
+    const innerRadius = planetSize * 1.5;
+    const outerRadius = planetSize * 2.5;
+
+    const ringGeometry = new THREE.RingGeometry(
+        innerRadius,
+        outerRadius,
+        64  // Smooth ring edge
+    );
+
     const ringMaterial = new THREE.MeshBasicMaterial({
-        map: ringTexture,
-        side: THREE.DoubleSide, // Render both sides of the ring
-        transparent: true,      // Enable transparency
-        opacity: 0.8,           // Adjust opacity for a more realistic look
+        map: TEXTURES["SaturnRings"],
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8
     });
 
-    // Create the ring mesh
-    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-    ringMesh.rotation.x = Math.PI / 2; // Rotate the ring to align with Saturn's equator
-    ringMesh.name = 'saturnRings';
+    const rings = new THREE.Mesh(ringGeometry, ringMaterial);
+    rings.rotation.x = Math.PI / 2;  // Lay flat around Saturn
+    rings.name = 'saturnRings';
 
-    // Add the ring mesh as a child of Saturn
-    saturnMesh.add(ringMesh);
-};
+    saturnMesh.add(rings);
+}
 
-/**
- * Creates a material for a planet, moon, or comet.
- */
-function createPlanetMaterial(texture, isSun = false, isComet = false, planetColor = '#ffffff') {
+// Creates the right material for each body type
+function createPlanetMaterial(texture, isSun, isComet, planetColor) {
+    const color = new THREE.Color(planetColor || '#ffffff');
+
+    // Sun needs special bright material
     if (isSun) {
         return new THREE.MeshBasicMaterial({
             map: texture,
-            color: 0xffffcc,
-            toneMapped: false,
-        });
-    } else if (isComet) {
-        return new THREE.MeshStandardMaterial({
-            map: texture, // Use texture if available
-            color: texture ? 0xffffff : new THREE.Color(planetColor), // Use white if texture, else planetColor
-            emissive: 0x88aaff,
-            emissiveIntensity: 0.5, // Slightly increased intensity for visibility
-            toneMapped: false,
-            roughness: 0.9,
-            metalness: 0.1,
-        });
-    } else {
-        // For planets/moons
-        const effectiveColor = planetColor ? new THREE.Color(planetColor) : new THREE.Color('#ffffff');
-        return new THREE.MeshStandardMaterial({
-            map: texture, // Apply texture if it exists
-            color: effectiveColor, // Base color, visible if no texture or texture has transparency
-            emissive: texture ? undefined : effectiveColor, // Only emit if no texture (avoids washing out texture)
-            emissiveIntensity: texture ? 0 : 0.05,   // Adjust glow intensity
-            roughness: 0.8, // Give non-textured planets some roughness
-            metalness: 0.1,
-            toneMapped: false, // Usually false is fine for space scenes unless you need specific HDR effects
+            color: 0xffffcc,  // Slightly yellow
+            toneMapped: false  // Stay bright
         });
     }
+
+    // Comet gets glowing blue tail
+    if (isComet) {
+        return new THREE.MeshStandardMaterial({
+            map: texture,
+            color: texture ? 0xffffff : color,
+            emissive: 0x88aaff,  // Blue glow
+            roughness: 0.9,
+            metalness: 0.1
+        });
+    }
+
+    // Regular planets and moons
+    return new THREE.MeshStandardMaterial({
+        map: texture,
+        color: color,
+        roughness: 0.8,
+        metalness: 0.1
+    });
 }
 
-
-
-
-export const updateCometTrail = (cometMesh, velocityVector) => {
+// Makes comet tail point away from movement direction
+export const updateCometTrail = (cometMesh, velocity) => {
     const trail = cometMesh.getObjectByName('cometTrail');
     if (!trail) return;
 
-    // Normalize the velocity vector to get direction
-    const direction = velocityVector.clone().normalize().multiplyScalar(-1); // Point away from travel direction
-
-    // Rotate the trail to align with the velocity vector
+    // Point trail opposite to movement
+    const direction = velocity.clone().normalize().negate();
     const up = new THREE.Vector3(0, 1, 0);
-    const axis = new THREE.Vector3();
-    axis.crossVectors(up, direction).normalize();
 
-    // Compute the angle between up and direction
+    // Calculate rotation needed
+    const axis = new THREE.Vector3().crossVectors(up, direction).normalize();
     const angle = Math.acos(up.dot(direction));
 
-    // Apply the rotation to the trail
+    // Apply rotation
     trail.quaternion.setFromAxisAngle(axis, angle);
 };
-
 
 
