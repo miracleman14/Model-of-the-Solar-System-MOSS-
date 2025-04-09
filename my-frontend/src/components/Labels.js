@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-const Labels = ({ scene, planets, camera }) => {
+const Labels = ({ scene, planets, camera, visible }) => {
     // Store references to our label sprites and their container group
     const labels = useRef({});
     const labelGroup = useRef(null);
@@ -85,6 +85,11 @@ const Labels = ({ scene, planets, camera }) => {
         }
         labelGroup.current = group;
 
+        // Set initial visibility
+        if (labelGroup.current) {
+            labelGroup.current.visible = visible;
+        }
+
         // Clean up when component unmounts
         return () => {
             if (scene && labelGroup.current) {
@@ -93,7 +98,14 @@ const Labels = ({ scene, planets, camera }) => {
                 labelGroup.current = null;
             }
         };
-    }, [scene]);
+    }, [scene, visible]);
+
+    // Update label visibility when the prop changes
+    useEffect(() => {
+        if (labelGroup.current) {
+            labelGroup.current.visible = visible;
+        }
+    }, [visible]);
 
     // Remove all existing labels from the scene
     function removeExistingLabels() {
@@ -139,6 +151,9 @@ const Labels = ({ scene, planets, camera }) => {
         if (!planets || !camera || !labelGroup.current || Object.keys(labels.current).length === 0) {
             return;
         }
+
+        // Only update if labels are visible
+        if (!visible) return;
 
         // Reusable vectors to avoid creating new ones each frame
         const tempPosition = new THREE.Vector3();

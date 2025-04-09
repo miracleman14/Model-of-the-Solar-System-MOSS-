@@ -47,6 +47,7 @@ const SolarSystem = () => {
     const initialPlanetPositionsRef = useRef({});
     const [isPlanetCreationModalOpen, setIsPlanetCreationModalOpen] = useState(false);
     const needsUpdateRef = useRef(false); // Ref to track if an update is needed
+    const [showLabels, setShowLabels] = useState(true); // State to toggle labels
 
 
     // Function to calculate the distance between two 3D points
@@ -606,6 +607,9 @@ const SolarSystem = () => {
                     <button onClick={toggleOrbitLines}>
                         {showOrbitLines ? 'Hide Orbit Lines' : 'Show Orbit Lines'}
                     </button>
+                    <button onClick={() => setShowLabels(!showLabels)}>
+                        {showLabels ? 'Hide Labels' : 'Show Labels'}
+                    </button>
                     <button onClick={() => setIsPlanetCreationModalOpen(true)}>
                         Create Planet
                     </button>
@@ -748,6 +752,7 @@ const SolarSystem = () => {
                 planets={planetData}
                 font={fontRef.current}
                 camera={cameraRef.current}
+                visible={showLabels}
             />
 
             {/* Temporary debug helper */}
