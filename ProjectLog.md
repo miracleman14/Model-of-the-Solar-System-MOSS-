@@ -50,27 +50,52 @@ This document logs the progress of the Model of the Solar System project, detail
   - **Added textures** for Sun, Planets, Moons and Halley's Comet
 - Stying to orbits
   - **Orbit Lines**: Incorporated orbit lines for all planets
----
 
-### Added Creating Planet Feature
+
+### Added Creating Planet Feature 5/03/25
 - Allow users to add planets in to simulate 
   - **User inputs constants** User can choose constants from dropdown and view planet in scene
 - Users can customise their planet during creation
   - **Colour and trail colour** Users can choose the colour of the trail and the planet
 
-## Ongoing Tasks 20/03/25
-- Improving Planet Creation
-- Style pages and have a consistent style for simulation
-- Add calming backing music
-- Improving modal features
+
+### Added Labels and allowed for toggle 25/03/25
+- Added Labels for planets
+  - Ensured all bodies, moons, comets and planets have labels
+- Added toggle labels button
+  - Made sure that labels can be toggled on and off if users please
+
+### Reformatted and fixed issues throughout the code 08/04/25
+- Fixed Issues in code
+  - Creating planet issues have been fixed
+- Reformatted code
+  - Ensured for cleaner comments and easier to understand code
+
+
+  
+### Styling updates for css
+- Made consistent styling for main js
+  - Implemented a consistent and clean css for the solar system page
+- Ensured the css between the planet creation makes sense with the solarsystem css
+  - Improving user experience
+
+
 
 
 ---
 
-## Planned Tasks 30/03/25
-- Implement time-based progression control for user-defined dates.
-- Allow user to go back in time
-- Introduce hovering over planet showing some details about planet
+## Ongoing Tasks 14/04/25
+- Ensuring the css accommodates for mobile screens
+- More formatting through code
+- Make about us page
+
+
+---
+
+## Planned Tasks 26/04/25
+- Unit Tests and more tests throughout
+- Connect to render backend and github pages frontend to ensure it can be run remotely via link
+
 
 ---
 
@@ -79,4 +104,4 @@ This log will be updated as the project progresses, with each milestone and comp
 
 ---
 
-_Last updated: [03/05/2025]_
+_Last updated: [09/04/2025]_

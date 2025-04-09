@@ -25,12 +25,10 @@ const HomePage = () => {
             <nav className="homepage-navbar">
                 <div className="navbar-content">
                     <div className="logo">
-                        <a href="/my-frontend/public">MOSS</a>
+                        <a href="/">MOSS</a>
                     </div>
                     <ul className="nav-links">
-                        <li><a href="/my-frontend/public">Home</a></li>
                         <li><a href="/about">About Us</a></li>
-                        <li><a href="/contact">Contact Us</a></li>
                     </ul>
                 </div>
             </nav>

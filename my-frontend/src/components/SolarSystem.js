@@ -14,6 +14,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import PlanetCreationModal from './PlanetCreationModal';
+import { useNavigate } from 'react-router-dom';
 
 
 const SolarSystem = () => {
@@ -48,6 +49,7 @@ const SolarSystem = () => {
     const [isPlanetCreationModalOpen, setIsPlanetCreationModalOpen] = useState(false);
     const needsUpdateRef = useRef(false); // Ref to track if an update is needed
     const [showLabels, setShowLabels] = useState(true); // State to toggle labels
+    const navigate = useNavigate();
 
 
     // Function to calculate the distance between two 3D points
@@ -585,6 +587,10 @@ const SolarSystem = () => {
             {/* Main container for the 3D scene */}
             <div id="solar-system-container"></div>
 
+            <button onClick={() => navigate('/')} className="home-button">
+                Back to Home
+            </button>
+
             {/* Controls container */}
             <div className="controls-container">
                 <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
@@ -773,13 +779,13 @@ const SolarSystem = () => {
                             });
                         }
                     }}
-                    style={{ position: 'absolute', top: '100px', left: '10px' }}
+                    style={{position: 'absolute', top: '100px', left: '10px'}}
                 >
                     Debug Labels
                 </button>
             )}
 
-            <Starfield scene={sceneRef.current} />
+            <Starfield scene={sceneRef.current}/>
 
             {/* Orbit Lines */}
             {showOrbitLines &&
