@@ -1,5 +1,3 @@
-// src/utils/constants.js
-
 // Define planet sizes (relative scaling factors)
 export const PLANET_SIZES = {
     "Mercury": 0.383,   // Mercury's radius is ~38.3% of Earth's
