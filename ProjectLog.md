@@ -80,28 +80,37 @@ This document logs the progress of the Model of the Solar System project, detail
   - Improving user experience
 
 
+### Frontend Improvements
+- Created About us page
+  - Gives more info about project and have made it able to run project
+- Ensured project is able to run on mobile and is usable for mobile users
+  - Added adjustments to css via media to make sure mobile users can access smoothly
+
+
+### Unit Tests
+- Completed Unit Tests
+  - Completed 7 Unit Tests going through core functions of simulation
+
+
+
+
 
 
 ---
 
-## Ongoing Tasks 14/04/25
-- Ensuring the css accommodates for mobile screens
-- More formatting through code
-- Make about us page
+## Ongoing Tasks 20/04/25
+
+- Understanding every portion of the code
+- Log Test for every planet orbit time
+- Further look into Unit Test results
 
 
 ---
 
-## Planned Tasks 26/04/25
-- Unit Tests and more tests throughout
-- Connect to render backend and github pages frontend to ensure it can be run remotely via link
-
-
----
 
 ## Notes
 This log will be updated as the project progresses, with each milestone and completed task recorded here for future reference.
 
 ---
 
-_Last updated: [09/04/2025]_
+_Last updated: [13/04/2025]_

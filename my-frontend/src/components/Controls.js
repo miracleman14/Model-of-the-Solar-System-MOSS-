@@ -1,7 +1,4 @@
-// src/components/Controls.js
-
 import React from 'react';
-import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 const Controls = ({ scene, camera, renderer }) => {
@@ -23,7 +20,7 @@ const Controls = ({ scene, camera, renderer }) => {
         }
     }, [scene, camera, renderer]);
 
-    return null; // This component doesn't render anything visible
+    return null;
 };
 
 export default Controls;

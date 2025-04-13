@@ -1,5 +1,3 @@
-// PlanetPreview.js
-
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
@@ -12,26 +10,26 @@ const PlanetPreview = ({ size, color }) => {
     const materialRef = useRef(null);
     const animationIdRef = useRef(null);
 
-    // Initialize scene, camera, and renderer only once
+    // Initialize scene, camera, and renderer
     useEffect(() => {
-        // Scene setup (only once)
+        // Scene setup
         if (!sceneRef.current) {
             sceneRef.current = new THREE.Scene();
-            // Optional: Add subtle ambient light
+            // Add subtle ambient light
             sceneRef.current.add(new THREE.AmbientLight(0x404040));
-            // Optional: Add a directional light for better shading (instead of MeshBasicMaterial)
+            // Add a directional light for better shading
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(5, 5, 5).normalize();
             sceneRef.current.add(directionalLight);
         }
 
         if (!cameraRef.current) {
-            // Initialize camera - initial Z position doesn't matter much as it will be updated
+            // Initialize camera
             cameraRef.current = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
             cameraRef.current.position.z = 5; // Initial position
         }
 
-        // Initialize renderer only once
+        // Initialize renderer
         if (!rendererRef.current) {
             const renderer = new THREE.WebGLRenderer({
                 antialias: true,
@@ -113,25 +111,19 @@ const PlanetPreview = ({ size, color }) => {
 
         // --- Create new sphere ---
         const geometry = new THREE.SphereGeometry(size, 32, 32);
-        // Consider MeshStandardMaterial for lighting effects
-        // const material = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.1 });
-        const material = new THREE.MeshBasicMaterial({ color }); // Keep basic if no lights
+        const material = new THREE.MeshBasicMaterial({ color });
         materialRef.current = material; // Store ref to new material
 
         const sphere = new THREE.Mesh(geometry, material);
         sceneRef.current.add(sphere);
         sphereRef.current = sphere; // Store ref to new sphere
 
-        // --- Adjust Camera --- <<<< KEY FIX
-        // Calculate a suitable distance based on sphere radius (size)
-        // Need distance > radius to see it. Add padding.
-        // tan(fov/2) = (radius / distance) => distance = radius / tan(fov/2)
+        // --- Adjust Camera ---
         const fovInRadians = cameraRef.current.fov * (Math.PI / 180);
         const objectSize = size * 2; // Diameter
         // Calculate distance to fit the object based on FOV
-        // This calculation fits based on height, which is fine for a sphere
         const distanceToFit = objectSize / (2 * Math.tan(fovInRadians / 2));
-        // Add some padding (e.g., 20% further away) and ensure a minimum distance
+        // Padding to ensure a minimum distance
         const desiredDistance = Math.max(distanceToFit * 1.2, size + 2); // Ensure camera is at least 2 units away from surface
 
         cameraRef.current.position.z = desiredDistance;
@@ -168,13 +160,12 @@ const PlanetPreview = ({ size, color }) => {
         // Start new animation
         animate();
 
-        // Cleanup function for *this* effect (when size/color change)
+        // Cleanup function for this effect (when size/color change)
         return () => {
             if (animationIdRef.current) {
                 cancelAnimationFrame(animationIdRef.current);
                 animationIdRef.current = null;
             }
-            // Don't dispose geometry/material here, handled at the start of the effect
         };
         // Re-run this effect if size or color changes
     }, [size, color]); // Include size and color in dependencies

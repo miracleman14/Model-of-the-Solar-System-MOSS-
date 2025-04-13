@@ -9,7 +9,7 @@ import Orbit from './Orbit';
 import useFetchPlanets from '../hooks/useFetchPlanets';
 import useSocket from '../hooks/useSocket';
 import { createCelestialBodyMesh, updateCometTrail,} from '../utils/helpers';
-import { moon_data } from '../utils/constants'; // Make sure this is imported!
+import { moon_data } from '../utils/constants';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -26,7 +26,7 @@ const SolarSystem = () => {
     const sceneRef = useRef(null);
     const cameraRef = useRef(null);
     const rendererRef = useRef(null);
-    const isSceneInitializedRef = useRef(false);
+    const isSceneInitialisedRef = useRef(false);
     const timeRef = useRef(0);
     const controlsRef = useRef(null);
     const fontRef = useRef(null);
@@ -39,13 +39,18 @@ const SolarSystem = () => {
     const [completedOrbits, setCompletedOrbits] = useState({});
     const [orbitAngles, setOrbitAngles] = useState({}); // Track angular progress around orbit
     const [showOrbitLines, setShowOrbitLines] = useState(true); // State to toggle orbit lines
+    const [createdPlanets, setCreatedPlanets] = useState([]);
+
     // Reference for Halley's comet velocity
     const cometVelocityRef = useRef(new THREE.Vector3());
+
     // Reference for last comet position to calculate velocity
     const lastCometPositionRef = useRef(null);
-    const [createdPlanets, setCreatedPlanets] = useState([]);
+
+
     // Add a ref to store initial planet positions
     const initialPlanetPositionsRef = useRef({});
+
     const [isPlanetCreationModalOpen, setIsPlanetCreationModalOpen] = useState(false);
     const needsUpdateRef = useRef(false); // Ref to track if an update is needed
     const [showLabels, setShowLabels] = useState(true); // State to toggle labels
@@ -92,7 +97,7 @@ const SolarSystem = () => {
         }
     };
 
-    //Effect to handle automatic pausing and resuming.
+    // Effect to handle automatic pausing and resuming.
     useEffect(() => {
         if (needsUpdateRef.current) {
             const initialPauseState = isPaused;
@@ -140,7 +145,7 @@ const SolarSystem = () => {
     }, [planetData, positionScale, moonDistanceScale]);
 
     useEffect(() => {
-        if (!isSceneInitializedRef.current) {
+        if (!isSceneInitialisedRef.current) {
             const scene = new THREE.Scene();
             sceneRef.current = scene;
 
@@ -151,7 +156,7 @@ const SolarSystem = () => {
                 1,
                 1e12
             );
-            camera.position.z = 500;
+            camera.position.z = 200;
             cameraRef.current = camera;
 
             const renderer = new THREE.WebGLRenderer({ antialias: true,
@@ -220,7 +225,7 @@ const SolarSystem = () => {
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 composer.setSize(window.innerWidth, window.innerHeight);
             });
-            isSceneInitializedRef.current = true;
+            isSceneInitialisedRef.current = true;
         }
     }, [speed]);
 
@@ -264,7 +269,7 @@ const SolarSystem = () => {
                     bodyMesh.name = body.name;
                     scene.add(bodyMesh);
 
-                    // Initialize last position for comet velocity calculation
+                    // Initialise last position for comet velocity calculation
                     if (isComet) {
                         lastCometPositionRef.current = new THREE.Vector3(
                             body.x / scale,
@@ -273,8 +278,8 @@ const SolarSystem = () => {
                         );
                     }
                 } else {
-                    // --- CORRECTED MOON CHECK ---
-                    if (moon_data[body.name]) {  // Use moon_data to identify moons!
+                    // --- MOON CHECK ---
+                    if (moon_data[body.name]) {  // Used moon_data to identify moons
                         const parent = planetData.find(p => moon_data[body.name]?.parent === p.name);
                         if (parent) {
                             const parentMesh = scene.getObjectByName(parent.name);
@@ -300,7 +305,6 @@ const SolarSystem = () => {
                                 let distance = Math.sqrt(relativeX * relativeX + relativeY * relativeY + relativeZ * relativeZ);
                                 let desiredDistance = parentRadius + moonRadius;
                                 desiredDistance *= 5.0;
-                                // --- ADJUSTMENTS (after basic desiredDistance) ---
 
                                 if (distance > 0) {
                                     relativeX /= distance;
@@ -371,7 +375,7 @@ const SolarSystem = () => {
                             }
                         }
                         scene.remove(object);
-                        continue; // Important: Skip to the next object
+                        continue; // Skip to the next object
                     }
 
                     // Duplicate detection and removal
@@ -391,9 +395,10 @@ const SolarSystem = () => {
                         const distBody = calculateDistance(currentBodyPosition, initialPosition);
 
 
-                        // If the existing object in the scene is *further* from the initial
-                        // position than the current `body` data, then the existing object
-                        // is the duplicate and should be removed.
+                        /* If the existing object in the scene is further from the initial position than the
+                         current body data, then the existing object
+                          is the duplicate and should be removed. */
+
                         if (distObject > distBody) {
                             if (object.geometry) object.geometry.dispose();
                             if (object.material) {
@@ -411,12 +416,12 @@ const SolarSystem = () => {
                 setOrbitPaths((prevOrbitPaths) => {
                     const newOrbitPaths = { ...prevOrbitPaths };
 
-                    // Initialize the path if it doesn't exist
+                    // Initialise the path if it doesn't exist
                     if (!newOrbitPaths[bodyName]) {
                         newOrbitPaths[bodyName] = [];
                     }
 
-                    // For Halley's comet, use a different approach to trail length
+                    // For Halley's comet
                     if (bodyName === "Halley") {
                         // Keep fewer points for Halley's orbit but retain its trail
                         const maxCometPoints = 8000; // Fewer points for comet orbit
@@ -487,10 +492,10 @@ const SolarSystem = () => {
 
                         // Check if the orbit is complete
                         if (newTotalAngle > 2 * Math.PI && distToStart < avgRadius * 0.00005) {
-                            // Use 5% of radius instead of 15%
+                            // Use 5% of radius
                             console.log(`${bodyName} completed orbit! Angle: ${newTotalAngle}, distToStart: ${distToStart}, avgRadius: ${avgRadius}`);
                             setCompletedOrbits(prev => ({...prev, [bodyName]: true}));
-                            // Simplify the path to a reasonable number of points for the final orbit
+                            // Simplify the path for the final orbit
                             const idealPointCount = bodyName.includes('Moon') ? 100 : 200;
                             if (updatedPath.length > idealPointCount) {
                                 const keepFactor = Math.ceil(updatedPath.length / idealPointCount);
@@ -746,9 +751,9 @@ const SolarSystem = () => {
                 onCreatePlanet={handleCreatePlanet}
             />
 
-            {/* Planet Modal - Use the imported component */}
+            {/* Planet Modal */}
             <PlanetModal
-                planet={selectedPlanet} // Pass the selected planet object (must have a .name)
+                planet={selectedPlanet} // Pass the selected planet object
                 onClose={() => setSelectedPlanet(null)} // Pass the function to close the modal
             />
 
@@ -761,29 +766,6 @@ const SolarSystem = () => {
                 visible={showLabels}
             />
 
-            {/* Temporary debug helper */}
-            {sceneRef.current && (
-                <button
-                    onClick={() => {
-                        const labels = sceneRef.current.getObjectByName('planetLabels');
-                        console.log('Label group:', labels);
-                        if (labels) {
-                            labels.traverse(obj => {
-                                if (obj.name.includes('label-')) {
-                                    console.log(`Label ${obj.name}`, {
-                                        position: obj.position,
-                                        visible: obj.visible,
-                                        parent: obj.parent
-                                    });
-                                }
-                            });
-                        }
-                    }}
-                    style={{position: 'absolute', top: '100px', left: '10px'}}
-                >
-                    Debug Labels
-                </button>
-            )}
 
             <Starfield scene={sceneRef.current}/>
 

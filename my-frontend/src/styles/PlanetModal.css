@@ -162,6 +162,9 @@
     align-items: center;
     z-index: 1000;
     backdrop-filter: blur(8px);
+    overflow-y: auto; /* Enable scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding: 20px 0; /* Add some padding at top/bottom */
 }
 
 .planet-creation-modal-content {
@@ -174,6 +177,9 @@
     border: 1px solid rgba(79, 172, 254, 0.3);
     position: relative;
     color: #fff;
+    max-height: 90vh; /* Limit height */
+    overflow-y: auto; /* Enable scrolling */
+    margin: auto; /* Center vertically */
 }
 
 .planet-creation-modal-content h2 {
@@ -321,41 +327,164 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-    .controls-container, .sidebar {
-        width: 90%;
-        left: 5%;
-        right: 5%;
-        top: 10px;
-    }
-
-    .sidebar {
-        top: 80px;
-    }
-
+@media (max-width: 992px) {
+    /* Tablet and large mobile adjustments */
     .modal-content {
+        padding: 2rem;
+    }
+
+    .planet-creation-modal-content {
         padding: 1.8rem;
     }
 
     .planet-creation-form-container {
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Tablet and small tablet adjustments */
+    .modal-content {
+        padding: 1.8rem;
+        width: 95%;
+    }
+
+    .modal-content h2 {
+        font-size: 1.6rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .modal-content p {
+        font-size: 0.95rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .modal-content .planet-stats {
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-content .stat-item {
+        padding: 0.8rem;
+    }
+
+    .modal-content .stat-value {
+        font-size: 1rem;
+    }
+
+    .planet-creation-modal-content {
+        padding: 1.5rem;
+        width: 95%;
+    }
+
+    .planet-creation-form-container {
         flex-direction: column;
+        gap: 1.5rem;
     }
 
     .planet-preview-container {
         order: -1;
+        padding: 1.5rem;
+    }
+
+    .planet-creation-form {
+        gap: 1rem;
+    }
+
+    .planet-creation-form label {
+        font-size: 1em;
+    }
+
+    .preview-details h3 {
+        font-size: 1.3em;
+    }
+
+    .preview-details p {
+        font-size: 1em;
     }
 }
 
-@media (max-width: 480px) {
-    .controls-container, .sidebar, .modal-content {
-        padding: 1.2rem;
+@media (max-width: 576px) {
+    /* Mobile adjustments */
+    .modal-content {
+        padding: 1.5rem;
+        border-radius: 12px;
+    }
+
+    .modal-content h2 {
+        font-size: 1.4rem;
     }
 
     .modal-content .planet-stats {
         grid-template-columns: 1fr;
     }
 
+    .modal-content button {
+        padding: 0.65rem 1.3rem;
+        font-size: 0.85rem;
+        width: 100%;
+    }
+
     .planet-creation-modal-content {
-        padding: 1.5rem;
+        padding: 1.2rem;
+    }
+
+    .planet-creation-modal-content h2 {
+        font-size: 1.5em;
+        margin-bottom: 1.2rem;
+    }
+
+    .planet-creation-form input,
+    .planet-creation-form select {
+        padding: 10px;
+    }
+
+    .planet-creation-form button {
+        padding: 10px;
+    }
+
+    .close-button {
+        width: 28px;
+        height: 28px;
+        top: 10px;
+        right: 10px;
+    }
+}
+
+@media (max-width: 400px) {
+    /* Small mobile adjustments */
+    .modal-content {
+        padding: 1.2rem;
+    }
+
+    .planet-creation-modal-content {
+        padding: 1rem;
+    }
+
+    .planet-creation-form label {
+        font-size: 0.95em;
+    }
+
+    .preview-details h3 {
+        font-size: 1.2em;
+    }
+
+    .preview-details p {
+        padding: 6px;
+        font-size: 0.95em;
+    }
+}
+
+/* Ensures inputs and buttons are easily tappable on mobile */
+@media (hover: none) {
+    .modal-content button,
+    .planet-creation-form button,
+    .close-button {
+        min-height: 44px; /* Minimum touch target size */
+    }
+
+    .planet-creation-form input,
+    .planet-creation-form select {
+        min-height: 44px;
     }
 }

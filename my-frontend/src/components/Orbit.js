@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { MOON_SIZES } from '../utils/constants'; // Adjust the import path as needed
+import { MOON_SIZES } from '../utils/constants';
 
 const Orbit = ({
                    orbitPath,
@@ -11,25 +11,25 @@ const Orbit = ({
                    moonDistanceScale,
                    bodyName,
                    completedOrbits = {},
-                   trailColor // Add this prop
+                   trailColor
                }) => {
     // Define maximum trail length for each body
     const getMaxTrailLength = useMemo(() => {
         const trailLengths = {
-            "Mercury": 400,    // Small trail for fast moving Mercury
-            "Venus": 350,      // Moderate trail for Venus
-            "Earth": 300,      // Standard trail for Earth
-            "Mars": 250,       // Slightly shorter trail for Mars
-            "Jupiter": 1000,   // Longer trail for gas giants
-            "Saturn": 900,     // Long trail for Saturn
-            "Uranus": 800,     // Substantial trail for ice giants
-            "Neptune": 750,    // Substantial trail for Neptune
-            "Pluto": 200,      // Short trail for Pluto
-            "Sun": 0,          // No trail for Sun (stationary)
-            "Halley": 3000,    // Very long trail for Halley's comet
+            "Mercury": 400,
+            "Venus": 350,
+            "Earth": 300,
+            "Mars": 250,
+            "Jupiter": 1000,
+            "Saturn": 900,
+            "Uranus": 800,
+            "Neptune": 750,
+            "Pluto": 200,
+            "Sun": 0,
+            "Halley": 3000,
             // Default lengths for moons
-            "Moon": 150,       // Earth's moon
-            "Io": 200,         // Jupiter's moons
+            "Moon": 150,
+            "Io": 200,
             "Europa": 200,
             "Ganymede": 200,
             "Callisto": 200
@@ -168,8 +168,6 @@ const Orbit = ({
                 const pointCount = generateTrailPoints.length;
 
                 for (let i = 0; i < pointCount; i++) {
-                    // Calculate alpha based on position (recent points are more opaque)
-                    const alpha = i / pointCount;
 
                     // Create color with appropriate opacity
                     const color = new THREE.Color(material.color);

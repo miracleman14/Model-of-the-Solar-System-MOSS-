@@ -5,14 +5,13 @@ import math
 import copy
 from datetime import datetime, timedelta
 from urllib import request
-import time  # Import for benchmarking
 
 import requests
 from flask import Flask, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from skyfield.api import load, wgs84
-import calculations  # Import the calculations module
+import calculations
 from constants import orbital_params, planetary_masses, M_sun, G, moon_data
 
 app = Flask(__name__)
@@ -36,10 +35,10 @@ def save_custom_planets(planets):
         json.dump(planets, f)
 
 
-# --- Load Ephemeris Files (Simplified) ---
+# --- Load Ephemeris Files
 eph = load('de440.bsp')  # Main solar system ephemeris
 
-# --- Robust Jupiter Moon Ephemeris Loading (using jup365)---
+# Jupiter Moon Ephemeris Loading (using jup365)---
 try:
     jup = load('jup365.bsp')
 except OSError as e:
@@ -84,8 +83,8 @@ jupiter_moon_ids = {
 }
 
 
-def initialize_small_body(small_body_id, name):
-    """Initializes a small body with caching."""
+def initialise_small_body(small_body_id, name):
+    """Initialises a small body with caching."""
 
     cache_file = f'cache_{name}.json'
     if os.path.exists(cache_file):
@@ -112,7 +111,7 @@ def initialize_small_body(small_body_id, name):
     return small_body
 
 def _fetch_small_body_data(small_body_id, name):
-    """Fetches small body data from JPL Horizons (internal helper)."""
+    """Fetches small body data (Halley) from JPL Horizons """
     ts = load.timescale()
     t = ts.now()
     yesterday = t - 1
@@ -208,7 +207,7 @@ def fetch_real_positions_for_today():
         try:
             with open(cache_file, 'r') as f:
                 cached_data = json.load(f)
-            # Basic cache validation (check if all expected planets are there)
+            # Check if all expected planets are there
             required_keys = ["Sun", "Mercury", "Venus", "Earth", "Moon", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto"]
             if all(any(body["name"] == key for body in cached_data) for key in required_keys):
                 print("Using cached initial positions.")
@@ -369,12 +368,12 @@ def fetch_real_positions_for_today():
             "az": 0,
         })
 
-    # --- Small Bodies (using cached initialization) ---
-    halley = initialize_small_body("1P", "Halley")
+    # --- Small Bodies (using cached initialisation) ---
+    halley = initialise_small_body("1P", "Halley")
     if halley:
         initial_data.append(halley)
     else:
-        print("Warning: Halley's Comet data could not be initialized.")
+        print("Warning: Halley's Comet data could not be initialised.")
 
     # --- Custom Planets ---
     custom_planets = load_custom_planets()
@@ -400,7 +399,7 @@ def adjust_speed(data):
         (0.1, 1),       # 2.4 hours/second (good for watching moon orbits)
         (1, 2),         # 1 day/second (good for inner planet orbits)
         (7, 3),         # 1 week/second
-        (30, 4),        # 1 month/second
+        (30, 4),        # 1 month/second (Easiest to see visually)
         (90, 5),        # 3 months/second (quarter year)
         (182.625, 6),   # 6 months/second (half year)
         (365.25, 7),    # 1 year/second (Earth's orbit)
@@ -418,7 +417,7 @@ def adjust_speed(data):
         days_per_second = time_scales[-1][0]
 
     # Calculate dt in seconds based on the desired days/second.
-    # This converts days to seconds (60*60*24 = 86400 seconds in a day)
+    # Converts days to seconds (60*60*24 = 86400 seconds in a day)
     dt = days_per_second * ( 60 * 24)
 
     emit('time_interval_update', {'time_interval': f"{days_per_second:.2f} days/second"})
@@ -427,39 +426,33 @@ def adjust_speed(data):
 
 
 simulation_running = False
-virtual_date = None  # Initialize virtual_date
+virtual_date = None  # Initialise virtual_date
 dt = 1  # Initial dt value
 
-# Initialize planets globally
+# Initialise planets globally
 planets = fetch_real_positions_for_today()
 
-# Simulation state
-simulation_running = False
-virtual_date = None
-dt = 1  # Initial time step
+
 
 @socketio.on('start_simulation')
 def start_simulation():
     global simulation_running, virtual_date, dt, planets
 
-    # Reset speed to default (0.1 days/second = speed factor 1)
+    # Reset speed to default
     dt = 0.1 * (60 * 24)
 
 
     if simulation_running:
         print("Simulation loop already running.")
-        # Optionally emit an error or just return
-        # emit('error', {'message': 'Simulation is already running'})
         return
 
     print("Attempting to start simulation loop...") # Log start attempt
 
-    # Initialize virtual_date if it's the first run or after reset
+    # Initialise virtual_date if it's the first run or after reset
     if virtual_date is None:
         virtual_date = datetime.now()
 
-    # --- Initialize orbit tracking data ---
-    # This will hold the state for the duration of this specific loop instance
+    # --- Initialise orbit tracking data ---
     local_orbit_data = {}
     for planet in planets: # Use the current state of global planets
         # Ensure planet has a 'name' key before adding
@@ -477,7 +470,7 @@ def start_simulation():
     simulation_running = True
     print("Simulation loop started.")
 
-    # Expected periods (in Earth days) - can be defined outside if constant
+    # Expected periods (in Earth days)
     expected_orbital_periods = {
         p.capitalize(): orbital_params[p]["orbital_period"]
         for p in orbital_params if p in planets_skyfield # Check key exists
@@ -490,7 +483,6 @@ def start_simulation():
 
     try:
         while simulation_running:
-            # --- Thread Safety Consideration ---
             # Create a copy of the planets list for this iteration
 
             current_planets_iteration = list(planets) # Make a shallow copy
@@ -506,7 +498,7 @@ def start_simulation():
             # Create a dictionary from the updated iteration for quick lookup
             updated_planets_dict = {p['name']: p for p in current_planets_iteration if 'name' in p}
 
-            # Update the global list - iterate through global and update from dict
+            # Update the global list, iterate through global and update from dict
 
             global_planet_names = {p.get('name') for p in planets}
             newly_added_this_cycle = []
@@ -529,7 +521,7 @@ def start_simulation():
             virtual_date += timedelta(seconds=safe_dt)
 
             # --- Orbit Tracking ---
-            # Iterate through the state of planets *after* the verlet step for this cycle
+            # Iterate through the state of planets after the verlet step for this cycle
             for planet in current_planets_iteration: # Use the list from this iteration
                 planet_name = planet.get('name')
                 if not planet_name or planet_name == "Sun":
@@ -537,15 +529,15 @@ def start_simulation():
 
 
                 if planet_name not in local_orbit_data:
-                    print(f"Dynamically initializing orbit tracking for: {planet_name}")
+                    print(f"Dynamically initialising orbit tracking for: {planet_name}")
                     local_orbit_data[planet_name] = {
                         "orbit_count": 0,
                         "last_angle": None,
                         "orbit_times": []
                     }
-                # Also initialize for planets added during the cycle update step
+                # Also initialise for planets added during the cycle update step
                 elif planet_name in newly_added_this_cycle and planet_name not in local_orbit_data:
-                    print(f"Dynamically initializing orbit tracking for cycle-added: {planet_name}")
+                    print(f"Dynamically initialising orbit tracking for cycle-added: {planet_name}")
                     local_orbit_data[planet_name] = { "orbit_count": 0, "last_angle": None, "orbit_times": [] }
 
                 # Proceed with orbit calculation only if data exists
@@ -555,7 +547,7 @@ def start_simulation():
                     if planet_name in moon_data:
                         parent_name = moon_data[planet_name].get('parent')
                         if parent_name:
-                            # Find parent in the *current iteration's* list
+                            # Find parent in the current iteration's list
                             parent = next((p for p in current_planets_iteration if p.get('name') == parent_name), None)
                             if parent and 'x' in parent and 'y' in parent and 'x' in planet and 'y' in planet:
                                 current_angle = math.atan2(planet['y'] - parent['y'], planet['x'] - parent['x'])
@@ -578,14 +570,13 @@ def start_simulation():
                             orbit_info['orbit_times'].append(virtual_date)
 
                             # Calculate and print orbital period
-                            # Calculate and print orbital period
                             if len(orbit_info['orbit_times']) > 1:
                                 t1 = orbit_info['orbit_times'][-2]
                                 t2 = orbit_info['orbit_times'][-1]
                                 actual_period_days = (t2 - t1).total_seconds() / (60 * 60 * 24)
                                 expected_period = expected_orbital_periods.get(planet_name) # Still get it if available
 
-                                # --- MODIFIED PRINTING ---
+                                # --- Printing Results ---
                                 print_str = f"{planet_name}: Orbit {orbit_info['orbit_count']} | Actual: {actual_period_days:.2f}d"
                                 if expected_period is not None:
                                     # If expected period exists, add the comparison details
@@ -594,7 +585,6 @@ def start_simulation():
                                     # Otherwise, indicate no expected value was found
                                     print_str += " | Expected: N/A"
                                 print(print_str)
-                                # --- END MODIFICATION ---
 
 
                         # Update last angle for next iteration
@@ -618,7 +608,7 @@ def start_simulation():
         print(f"Error in simulation loop: {e}")
         traceback.print_exc()
     finally:
-        # Ensure the flag is reset when the loop exits (normally or via exception)
+        # Ensure the flag is reset when the loop exits
         simulation_running = False
         print("Simulation loop stopped.")
 
@@ -631,7 +621,7 @@ def stop_simulation():
 planets = fetch_real_positions_for_today()
 initial_planets = planets.copy()
 
-# Initialize the simulation state
+# Initialise the simulation state
 simulation_state = {
     "planets": fetch_real_positions_for_today(),
     "virtual_date": datetime.now()
@@ -713,7 +703,7 @@ def get_orbit_paths():
         orbit_paths[planet_name] = points
 
     # Calculate orbit path for Halley (using cached data if available)
-    halley = initialize_small_body("1P", "Halley")
+    halley = initialise_small_body("1P", "Halley")
     if halley:
         halley_period = 76 * 365.25
         num_points = int(halley_period / 10)
@@ -774,7 +764,7 @@ def create_planet():
     save_custom_planets(custom_planets)
 
     # Reset the simulation state to the initial state
-    planets = fetch_real_positions_for_today()  # Reinitialize planets to their initial positions
+    planets = fetch_real_positions_for_today()  # Reinitialise planets to their initial positions
     virtual_date = datetime.now()  # Reset the virtual date to the current time
 
     # Add the new planet to the planets list
@@ -808,7 +798,7 @@ def handle_create_planet(data):
             "vx": 0,
             "vy": math.sqrt(G * M_sun / math.sqrt(data['x']**2 + data['y']**2 + data['z']**2)) if (data['x']**2 + data['y']**2 + data['z']**2) > 0 else 0,
             "vz": 0,
-            "ax": 0, # Initialize acceleration
+            "ax": 0, # Initialise acceleration
             "ay": 0,
             "az": 0,
             "planetColor": data.get('planetColor', '#CCCCCC'), # Use provided color or default
@@ -820,11 +810,7 @@ def handle_create_planet(data):
         planets.append(new_planet)
         print(f"Added {new_planet['name']} to planets list. Total bodies: {len(planets)}")
 
-        # --- NO NEED TO RESTART SIMULATION ---
-        # simulation_running = True # REMOVE THIS
-        # start_simulation() # REMOVE THIS
-
-        # Save to custom planets file (Optional but good practice)
+        # Save to custom planets file
         custom_planets = load_custom_planets()
         # Avoid duplicates in save file if necessary
         if not any(p['name'] == new_planet['name'] for p in custom_planets):
@@ -832,16 +818,14 @@ def handle_create_planet(data):
             save_custom_planets(custom_planets)
 
 
-        # Emit confirmation (optional, but can be useful)
+        # Emit confirmation
         # The main 'planet_data' emit in the simulation loop will show the new planet
         emit('planet_created_ack', {'name': new_planet['name'], 'status': 'added'}, broadcast=False) # Acknowledge to sender
-        # Optional: emit the new planet immediately to all clients if needed,
-        # but relying on the main loop's 'planet_data' is usually sufficient.
-        # emit('new_planet_added', new_planet, broadcast=True)
+
 
     except Exception as e:
         print(f"Error processing create_planet event: {e}")
-        # Optionally emit an error back to the client
+        # emit an error back to the client
         emit('planet_creation_error', {'message': str(e)}, broadcast=False)
 
 

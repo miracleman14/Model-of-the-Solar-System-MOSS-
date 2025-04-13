@@ -28,14 +28,14 @@ const Labels = ({ scene, planets, camera, visible }) => {
         padding: 18,
 
         // Visibility settings
-        maxVisibleDistance: 5000, // Labels disappear beyond this distance
+        maxVisibleDistance: 500000, // Labels disappear beyond this distance
 
         // Fade out when camera gets too close
         closeFadeStart: 100,    // Start fading at this distance
         closeFadeEnd: 25,       // Fully faded at this distance
         minCloseOpacity: 0.2,   // Minimum opacity when very close
 
-        // Minimum opacity when not close (keeps labels readable)
+        // Minimum opacity when not close
         minFarOpacity: 0.6,
 
         // Rendering settings
@@ -110,7 +110,7 @@ const Labels = ({ scene, planets, camera, visible }) => {
     // Remove all existing labels from the scene
     function removeExistingLabels() {
         if (labelGroup.current) {
-            // Remove in reverse order to avoid array issues
+            // Removed in reverse order to avoid array issues
             for (let i = labelGroup.current.children.length - 1; i >= 0; i--) {
                 const sprite = labelGroup.current.children[i];
                 labelGroup.current.remove(sprite);
@@ -262,7 +262,6 @@ const Labels = ({ scene, planets, camera, visible }) => {
         }
     }
 
-    // This component doesn't render anything itself
     return null;
 };
 

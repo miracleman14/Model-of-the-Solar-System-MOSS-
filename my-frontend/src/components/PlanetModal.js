@@ -14,7 +14,6 @@ const COLOR_NAMES = {
     '#ffa500': 'Orange',
     '#a52a2a': 'Brown',
     '#808080': 'Gray',
-    // Add more color mappings as needed
 };
 
 // Function to find the closest named color
@@ -62,7 +61,7 @@ const PLANET_DATA = {
         diameter: "1,392,700 km",
         temp: "5,500°C (surface)",
         composition: "Hydrogen (~73%), Helium (~25%)",
-        moons: "N/A" // Stars don't have moons in the planetary sense
+        moons: "N/A"
     },
     Mercury: {
         type: "Planet",
@@ -205,7 +204,6 @@ const PLANET_DATA = {
         temp: "Highly Variable",
         moons: "N/A"
     }
-    // Placeholder for created planets will be handled by the default object below
 };
 
 // Default object for unknown bodies (including created planets)

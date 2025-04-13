@@ -1,10 +1,9 @@
-# calculations.py
 import math
 from constants import G
 
 def calculate_forces(planets):
     """Calculates gravitational forces between all planets."""
-    epsilon = 1e5  # Softening parameter (in meters)
+    epsilon = 1e5
 
     # Reset accelerations
     for p in planets:
@@ -50,7 +49,7 @@ def verlet_step(planets, dt):
         p['y'] += p['vy'] * dt + 0.5 * p['ay'] * dt**2
         p['z'] += p['vz'] * dt + 0.5 * p['az'] * dt**2
 
-    # 3. Recalculate accelerations based on the *new* positions.
+    # 3. Recalculate accelerations based on the new positions.
     calculate_forces(planets)
 
     # 4. Update velocities using the average of the previous and new accelerations.
