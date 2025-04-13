@@ -1,4 +1,3 @@
-// utils/helpers.js
 import * as THREE from 'three';
 
 // Define planet sizes (relative scaling factors)
@@ -58,7 +57,7 @@ export const createCelestialBodyMesh = (body, positionScale) => {
     const isComet = body.name === "Halley";
     const isSaturn = body.name === "Saturn";
 
-    // Calculate the size - use custom size if provided, otherwise use defaults
+    // Calculate the size
     let size = calculateBodySize(body);
 
     // Adjust visual size for special cases
