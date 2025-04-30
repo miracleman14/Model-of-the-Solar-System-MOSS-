@@ -14,21 +14,96 @@ This repository contains the development of a 3D solar system simulation. The si
 
 The repository is divided into the following main components:
 
-- `/backend`: Contains the Flask-based backend code for the simulation, handling API requests and physics calculations.
-- `/frontend`: React.js code that renders the solar system simulation and handles user inputs.
-- `/docs`: Documentation related to the project, including architecture, design decisions, and development notes.
-- `/assets`: Static assets for images, textures, and other resources used in the simulation.
+- `/my-backend`: Contains the Flask-based backend code for the simulation, handling API requests and physics calculations.
+- `/my-frontend`: React.js code that renders the solar system simulation and handles user inputs.
+
 
 The main software artefacts are located in:
 
-- `/backend/` - The main simulation logic that updates the planetary positions.
-- `/frontend/src/` - The main React component for rendering the 3D solar system.
+-   `/my-backend/src/app.py`: Main Flask application file, SocketIO handlers, API routes.
+-   `/my-backend/src/calculations.py`: Core physics calculation logic.
+-   `/my-backend/src/constants.py`: Physical constants and initial body data.
+-   `/my-frontend/src/components/SolarSystem.js`: The main React component for rendering the 3D scene and managing state.
+-   `/my-frontend/src/hooks/`: Custom React hooks for data fetching and WebSocket handling.
+-   `/my-frontend/src/utils/`: Helper functions and frontend constants.
+-   `/my-frontend/public/`: Textures for celestial bodies
 
 ## Getting Started
 
 ### Prerequisites
 - Python 3.8+ for backend development
 - Node.js 14+ for frontend development
+- Git
+
+### Installation
+
+1.  **Clone the repository:**
+2. **Set up the Backend:**
+    ```bash
+    cd backend
+
+    # Create a virtual environment
+    python -m venv venv
+
+    # Activate the virtual environment
+    # Windows:
+    # venv\Scripts\activate
+    # macOS/Linux:
+    # source venv/bin/activate
+    
+   # Install Python dependencies
+   # pip install -r requirements.txt
+   
+3.    **Set up the Frontend:**
+      ```bash
+      cd frontend
+      
+    # Install Node.js dependencies
+    npm install
+
+    
+### Running the Application
 
 
-Note: I am intending to make the project accessible via browser link by uploading it to GitHub Pages to make it easier to access.
+1.  **Start the Backend Server:**
+    ```bash
+    cd my-backend/src
+    # Make sure your virtual environment is activated
+    # source venv/bin/activate # macOS/Linux
+    # venv\Scripts\activate # Windows
+    python app.py
+
+2.  **Start the Frontend Development Server:**
+    Open *another* terminal window.
+    ```bash
+    cd my-frontend
+    npm start
+
+3.  **Access the Simulation:**
+    Open your web browser and navigate to `http://localhost:3000`
+
+## Technology Stack
+
+*   **Backend:**
+    *   Language: Python 3
+    *   Framework: Flask
+    *   Real-time Communication: Flask-SocketIO
+    *   Astronomy Calculations: Skyfield
+    *   HTTP Requests: Requests (for JPL API)
+    *   Data Handling: JSON
+*   **Frontend:**
+    *   Library: React.js
+    *   3D Graphics: Three.js
+    *   Real-time Communication: socket.io-client
+    *   Language: JavaScript
+    *   Styling: CSS 
+*   **Data Sources:**
+    *   JPL Horizons API (for small body data)
+    *   NASA/JPL SPICE Ephemeris Files (`.bsp` format, DE440, JUP365)
+*   **Core Concepts:**
+    *   N-Body Simulation
+    *   Velocity Verlet Integration
+    *   WebSockets
+
+
+
