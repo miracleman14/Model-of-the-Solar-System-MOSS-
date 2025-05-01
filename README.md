@@ -40,7 +40,7 @@ The main software artefacts are located in:
 1.  **Clone the repository:**
 2. **Set up the Backend:**
     ```bash
-    cd backend
+    cd my-backend
 
     # Create a virtual environment
     python -m venv venv
@@ -56,7 +56,7 @@ The main software artefacts are located in:
    
 3.    **Set up the Frontend:**
       ```bash
-      cd frontend
+      cd my-frontend
       
     # Install Node.js dependencies
     npm install
