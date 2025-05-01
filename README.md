@@ -1,4 +1,4 @@
-# Model of the Solar System
+# Model of the Solar System (MOSS)
 
 ## Project Overview
 
