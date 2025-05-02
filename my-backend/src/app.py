@@ -15,8 +15,8 @@ import calculations
 from constants import orbital_params, planetary_masses, M_sun, G, moon_data
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000"])
-socketio = SocketIO(app, cors_allowed_origins=["http://localhost:3000"])
+CORS(app, origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # File to store custom planets
 CUSTOM_PLANETS_FILE = 'custom_planets.json'
