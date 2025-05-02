@@ -18,8 +18,9 @@ import { useNavigate } from 'react-router-dom';
 
 
 const SolarSystem = () => {
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
     const { planetData, date, isPaused, handleSimulationToggle, setPlanetData } = useFetchPlanets();
-    const { socket, emitEvent, onEvent, timeInterval } = useSocket('http://localhost:5000');
+    const { socket, emitEvent, onEvent, timeInterval } = useSocket(backendUrl);
     const [speed, setSpeed] = useState(1);
     const [selectedPlanet, setSelectedPlanet] = useState(null);
     const [orbitPaths, setOrbitPaths] = useState({});
@@ -88,7 +89,8 @@ const SolarSystem = () => {
 
     const fetchPlanetData = async () => {
         try {
-            const response = await fetch('/api/get-simulation-state');
+            const fetchUrl = `${backendUrl}/api/get-simulation-state`;
+            const response = await fetch(fetchUrl);
             const data = await response.json();
             setPlanetData(data.planets); // Use setPlanetData here
             needsUpdateRef.current = true; // Set the update flag

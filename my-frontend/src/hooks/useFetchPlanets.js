@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import io from 'socket.io-client';
 
+const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
 // Hook for managing planet data and simulation state
 const useFetchPlanets = () => {
     // State for storing planet data
@@ -19,14 +21,14 @@ const useFetchPlanets = () => {
     const fetchData = useCallback(async () => {
         try {
             // Get initial simulation state from server
-            const response = await fetch('http://localhost:5000/reset');
+            const response = await fetch(`${backendUrl}/reset`);
             const initialData = await response.json();
 
             // Set initial planet positions
             setPlanetData(initialData.planets || []);
 
             // Connect to socket server
-            const socket = io('http://localhost:5000');
+            const socket = io(backendUrl, {transports: ['websocket', 'polling']});
             socketRef.current = socket;
 
             // Start the simulation
