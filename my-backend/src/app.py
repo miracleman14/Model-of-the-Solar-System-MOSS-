@@ -19,7 +19,7 @@ from constants import orbital_params, planetary_masses, M_sun, G, moon_data
 
 app = Flask(__name__)
 CORS(app, origins="*")
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # File to store custom planets
 CUSTOM_PLANETS_FILE = 'custom_planets.json'
@@ -630,6 +630,12 @@ simulation_state = {
     "virtual_date": datetime.now()
 }
 
+@app.route('/')
+def index():
+    print("Root route '/' accessed.")
+    return jsonify({"status": "Backend is running"})
+
+
 @app.route('/reset')
 def reset_simulation():
     global simulation_state, virtual_date, planets, dt
@@ -833,4 +839,6 @@ def handle_create_planet(data):
 
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    print("Starting Flask development server with SocketIO...")
+    # Correct way to run for development with SocketIO and eventlet
+    socketio.run(app, debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
